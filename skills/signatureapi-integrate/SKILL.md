@@ -1,6 +1,9 @@
 ---
 name: signatureapi-integrate
 description: "SignatureAPI integration reference. Use when adding electronic signatures to an application, sending a document for signature, building or changing a signing flow, or wiring up SignatureAPI webhooks."
+inputs:
+  - name: SIGNATUREAPI_KEY
+    required: true
 ---
 
 # Integrate SignatureAPI
@@ -22,6 +25,10 @@ registration or delivery log anywhere outside the dashboard.
 
 REST fallback: `https://api.signatureapi.com/v1`, header `X-API-Key`. Test keys
 start with `key_test_`. **This skill works in test mode only.**
+
+`SIGNATUREAPI_KEY` is read from the environment only. Never pass it as a
+command-line argument — argv is exposed in shell history and process
+listings on any shared or logged system.
 
 Install this skill's one dependency once, then check your setup:
 

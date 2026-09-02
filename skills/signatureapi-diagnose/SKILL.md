@@ -2,6 +2,9 @@
 name: signatureapi-diagnose
 description: "SignatureAPI failure runbook. Use when an envelope is stuck in processing, a signature webhook never arrived, a recipient never got the signing email, a deliverable is missing after completion, or the API returns 422 on envelope creation."
 allowed-tools: Bash, Read, Grep, WebFetch
+inputs:
+  - name: SIGNATUREAPI_KEY
+    required: true
 ---
 
 # Troubleshoot SignatureAPI
@@ -22,6 +25,10 @@ is added later. Because of that, it runs against either a test or a live key
 with no flag needed: reading a production envelope during an incident is
 exactly the behaviour wanted here. Every script reports which mode
 (`test` or `live`) it actually ran in, so that is never left ambiguous.
+
+`SIGNATUREAPI_KEY` is read from the environment only. Never pass it as a
+command-line argument — argv is exposed in shell history and process
+listings on any shared or logged system.
 
 ## Symptoms
 
