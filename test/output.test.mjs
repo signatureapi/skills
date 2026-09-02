@@ -3,10 +3,10 @@ import assert from "node:assert/strict";
 import { gap, requireTestKey } from "../lib/output.mjs";
 
 test("requireTestKey returns a test key unchanged", () => {
-  assert.equal(requireTestKey("key_test_abc", false), "key_test_abc");
+  assert.equal(requireTestKey("key_test_abc"), "key_test_abc");
 });
 
-test("requireTestKey exits on a live key without --allow-live", () => {
+test("requireTestKey exits on a live key, with no way to bypass it", () => {
   const exit = process.exit;
   const log = console.log;
   let code = null;
@@ -14,7 +14,7 @@ test("requireTestKey exits on a live key without --allow-live", () => {
   process.exit = (c) => { code = c; throw new Error("exited"); };
   console.log = (s) => { printed = s; };
   try {
-    assert.throws(() => requireTestKey("key_live_abc", false));
+    assert.throws(() => requireTestKey("key_live_abc"));
   } finally {
     process.exit = exit;
     console.log = log;
@@ -23,8 +23,8 @@ test("requireTestKey exits on a live key without --allow-live", () => {
   assert.equal(JSON.parse(printed).code, "LIVE_KEY_REFUSED");
 });
 
-test("requireTestKey allows a live key when explicitly permitted", () => {
-  assert.equal(requireTestKey("key_live_abc", true), "key_live_abc");
+test("requireTestKey has no parameter that can let a live key through", () => {
+  assert.equal(requireTestKey.length, 1);
 });
 
 test("gap records the operation, the fallback and where to report it", () => {

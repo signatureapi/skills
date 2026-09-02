@@ -2,7 +2,7 @@
 import { ok, fail, requireTestKey } from "./lib/output.mjs";
 
 const API = process.env.SIGNATUREAPI_BASE_URL ?? "https://api.signatureapi.com/v1";
-const key = requireTestKey(process.env.SIGNATUREAPI_KEY, process.argv.includes("--allow-live"));
+const key = requireTestKey(process.env.SIGNATUREAPI_KEY);
 
 const res = await fetch(`${API}/envelopes?limit=1`, { headers: { "X-API-Key": key } });
 

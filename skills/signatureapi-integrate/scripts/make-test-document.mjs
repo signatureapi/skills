@@ -27,7 +27,7 @@ export function buildPdf() {
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
-  const key = requireTestKey(process.env.SIGNATUREAPI_KEY, process.argv.includes("--allow-live"));
+  const key = requireTestKey(process.env.SIGNATUREAPI_KEY);
   const res = await fetch(`${API}/uploads`, {
     method: "POST",
     headers: { "X-API-Key": key, "Content-Type": "application/pdf" },

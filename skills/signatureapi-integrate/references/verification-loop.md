@@ -105,14 +105,15 @@ with that install command if it isn't.
 
 If you already have both the envelope id and the URL (for example, resolved
 via `list_emails` → `get_email` under `email_link`), pass both:
-`--envelope <id> --url <url>`. The envelope fetch still proves test mode, so
-`--allow-live` is not needed, and the browser walk uses the URL you supplied
-without re-deriving it from the envelope response.
+`--envelope <id> --url <url>`. The envelope fetch proves test mode and that
+the supplied URL belongs to one of its ceremonies, and the browser walk uses
+the URL you supplied without re-deriving it from the envelope response.
 
-`--url` alone, with no `--envelope`, is the true escape hatch: an unverified
-URL cannot be proven to be test mode, which is why it requires
-`--allow-live` even for a URL that is actually test-mode. Prefer
-`--envelope`, with or without `--url` alongside it.
+`--url` alone, with no `--envelope`, is refused outright: an unverified URL
+cannot be proven to belong to a test-mode ceremony, and there is no flag to
+accept that risk instead — this script has no code path that can run against
+a live ceremony. Always pass `--envelope`, with or without `--url` alongside
+it.
 
 After it reports `walked: true`, confirm completion with
 `watch-events.mjs --envelope <id>` — the same verification step as Branch A.

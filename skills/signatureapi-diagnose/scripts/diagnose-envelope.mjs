@@ -64,7 +64,7 @@ function arg(name) {
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
-  const key = requireTestKey(process.env.SIGNATUREAPI_KEY, process.argv.includes("--allow-live"));
+  const key = requireTestKey(process.env.SIGNATUREAPI_KEY);
   const id = arg("envelope");
   if (!id) fail("MISSING_ENVELOPE_ID", "Pass --envelope <id>.", ["node diagnose-envelope.mjs --envelope env_..."]);
 

@@ -62,18 +62,16 @@ export function collectCeremonyUrls(envelope, recipientKey) {
  * out any host swap, it is the strongest check available without a
  * ceremony-resolution endpoint (which does not exist).
  */
-export function checkSuppliedUrlAgainstEnvelope(envelope, suppliedUrl, recipientKey, allowLive) {
+export function checkSuppliedUrlAgainstEnvelope(envelope, suppliedUrl, recipientKey) {
   const urls = collectCeremonyUrls(envelope, recipientKey);
 
   if (urls.length === 0) {
-    if (allowLive) return { ok: true };
     return {
       ok: false,
       code: "EMAIL_LINK_URL_UNVERIFIABLE",
       message: "This envelope returns no ceremony.url on any recipient (email_link authentication does this by design), so the supplied --url cannot be checked against it — there is nothing to match it to.",
       next: [
         "Create the verification envelope with create-test-envelope.mjs's default custom authentication instead — its ceremony.url comes back on the envelope and can be verified",
-        "Or, if you genuinely intend to walk a URL this envelope cannot vouch for, re-run with --allow-live",
       ],
     };
   }
@@ -91,7 +89,6 @@ export function checkSuppliedUrlAgainstEnvelope(envelope, suppliedUrl, recipient
       message: "The supplied --url does not match any ceremony this envelope returned, so it cannot be proven to belong to it. --envelope proves the id is test-mode; it does not prove the URL is that envelope's.",
       next: [
         "Use a ceremony URL this envelope actually returned (recipients[].ceremony.url from create-test-envelope.mjs or get_envelope) — fetch it fresh, the URL is re-minted on every read but its ceremony stays the same one",
-        "Or drop --envelope and re-run with --url <url> --allow-live if you intend to walk an unrelated URL",
       ],
     };
   }
@@ -153,27 +150,25 @@ export async function pollForRecipientCompletion({ api, envelopeId, recipientKey
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
-  const allowLive = process.argv.includes("--allow-live");
-  const key = requireTestKey(process.env.SIGNATUREAPI_KEY, allowLive);
+  const key = requireTestKey(process.env.SIGNATUREAPI_KEY);
 
   const escapeHatchUrl = arg("url");
   const envelopeId = arg("envelope");
 
-  if (escapeHatchUrl && !envelopeId && !allowLive) {
-    fail("URL_REQUIRES_ALLOW_LIVE", "A --url given without --envelope cannot be proven to be a test-mode ceremony. Pass --allow-live alongside --url to confirm you accept that risk, or pass --envelope <id> alongside --url so fetching the envelope with your test key proves test mode.", [
-      "Prefer: node scripts/complete-ceremony.mjs --envelope <id> --url <ceremony url> --i-consent",
-      "Or re-run with: --url <url> --allow-live --i-consent",
+  if (escapeHatchUrl && !envelopeId) {
+    fail("URL_REQUIRES_ENVELOPE", "A --url given without --envelope cannot be proven to belong to a test-mode ceremony, and there is no flag to bypass that — pass --envelope <id> alongside --url so fetching the envelope with your test key proves test mode.", [
+      "node scripts/complete-ceremony.mjs --envelope <id> --url <ceremony url> --i-consent",
     ]);
   }
 
   if (!escapeHatchUrl && !envelopeId) {
-    fail("MISSING_ENVELOPE_ID", "Pass --envelope <id> (preferred), --envelope <id> --url <ceremony url>, or --url <ceremony url> --allow-live.", [
+    fail("MISSING_ENVELOPE_ID", "Pass --envelope <id> (preferred) or --envelope <id> --url <ceremony url>.", [
       "node scripts/complete-ceremony.mjs --envelope <id> --i-consent",
     ]);
   }
 
   if (!process.argv.includes("--i-consent")) {
-    fail("CONSENT_REQUIRED", "This drives a real browser through a signing ceremony. Test mode only, and only with the user's explicit consent.", [
+    fail("CONSENT_REQUIRED", "This drives a real browser through a signing ceremony. Test mode only, and only once the user has confirmed they want it driven for them rather than doing it themselves.", [
       "Ask the user to confirm, then re-run with --i-consent",
       "Or use Branch A: hand the ceremony link to the user and wait",
     ]);
@@ -200,7 +195,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     envelope = await res.json();
 
     if (url) {
-      const check = checkSuppliedUrlAgainstEnvelope(envelope, url, recipientKey, allowLive);
+      const check = checkSuppliedUrlAgainstEnvelope(envelope, url, recipientKey);
       if (!check.ok) {
         fail(check.code, check.message, check.next);
       }
@@ -394,19 +389,9 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   const finalUrl = page.url();
   await browser.close();
 
-  if (!envelopeId) {
-    // No --envelope means no envelope id to poll — this is the bare --url
-    // --allow-live escape hatch. The walk cannot be verified server-side in
-    // this mode; say so plainly rather than reporting unverified success as
-    // if it were confirmed.
-    ok({
-      walked: true,
-      verified: false,
-      warning: "No --envelope was supplied, so recipient completion could not be confirmed against GET /envelopes/{id}. This result is NOT a verified success.",
-      final_url: finalUrl,
-      next: ["node scripts/watch-events.mjs --envelope <envelope id>"],
-    });
-  }
+  // --envelope is now mandatory (see the URL_REQUIRES_ENVELOPE check above),
+  // so envelopeId is always set here — there is no unverified-walk path left
+  // to report through.
 
   // The walk finishing without a thrown error proves nothing by itself — it
   // is exactly what the original, defective version of this script reported

@@ -13,7 +13,7 @@ function arg(name, fallback) {
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
-  const key = requireTestKey(process.env.SIGNATUREAPI_KEY, process.argv.includes("--allow-live"));
+  const key = requireTestKey(process.env.SIGNATUREAPI_KEY);
   const envelopeId = arg("envelope");
   if (!envelopeId) {
     fail("MISSING_ENVELOPE_ID", "Pass --envelope <id>.", [
