@@ -12,9 +12,9 @@ npx skills add signatureapi/skills
 
 ## Skills
 
-- **integrate-signatures** — add SignatureAPI e-signature flows (envelopes, documents, recipients,
+- **signatureapi-integrate** — add SignatureAPI e-signature flows (envelopes, documents, recipients,
   places, ceremonies) to an application.
-- **troubleshoot-signatures** — diagnose stuck envelopes, failed ceremonies, and delivery issues
+- **signatureapi-diagnose** — diagnose stuck envelopes, failed ceremonies, and delivery issues
   against a live SignatureAPI account.
 
 ## Environment

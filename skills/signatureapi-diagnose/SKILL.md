@@ -1,5 +1,5 @@
 ---
-name: troubleshoot-signatures
+name: signatureapi-diagnose
 description: "SignatureAPI failure runbook. Use when an envelope is stuck in processing, a signature webhook never arrived, a recipient never got the signing email, a deliverable is missing after completion, or the API returns 422 on envelope creation."
 ---
 

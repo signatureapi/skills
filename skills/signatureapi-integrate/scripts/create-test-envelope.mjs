@@ -15,7 +15,7 @@ export function buildEnvelope({ title, documentUrl, recipientName, recipientEmai
           provider: "No identity verification performed",
           data: {
             Warning:
-              "Test-mode envelope created by the integrate-signatures skill to verify an integration end to end. No recipient identity check was performed.",
+              "Test-mode envelope created by the signatureapi-integrate skill to verify an integration end to end. No recipient identity check was performed.",
           },
         },
       ],

@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { selectSchema } from "../skills/engineering/integrate-signatures/scripts/openapi-explore.mjs";
+import { selectSchema } from "../skills/signatureapi-integrate/scripts/openapi-explore.mjs";
 
 const spec = {
   components: { schemas: { Envelope: { type: "object", properties: { title: { type: "string" } } } } },

@@ -1,5 +1,5 @@
 {
-  "name": "@signatureapi/troubleshoot-signatures",
+  "name": "@signatureapi/signatureapi-diagnose",
   "private": true,
   "type": "module",
   "dependencies": { "yaml": "^2.7.0" }

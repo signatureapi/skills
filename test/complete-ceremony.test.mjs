@@ -4,7 +4,7 @@ import {
   collectCeremonyUrls,
   extractCeremonyId,
   checkSuppliedUrlAgainstEnvelope,
-} from "../skills/engineering/integrate-signatures/scripts/complete-ceremony.mjs";
+} from "../skills/signatureapi-integrate/scripts/complete-ceremony.mjs";
 
 /** A ceremony URL shaped like the real ones: a JWT `token` query param whose
  * payload carries `ceremony_id`. Header/signature content doesn't matter for

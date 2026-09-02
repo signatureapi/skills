@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { verdict } from "../skills/engineering/troubleshoot-signatures/scripts/diagnose-envelope.mjs";
+import { verdict } from "../skills/signatureapi-diagnose/scripts/diagnose-envelope.mjs";
 
 test("an envelope stuck in processing is diagnosed as document preparation", () => {
   const v = verdict({ envelope: { status: "processing" }, events: [], recipients: [] });

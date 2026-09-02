@@ -1,11 +1,11 @@
 ---
-name: integrate-signatures
+name: signatureapi-integrate
 description: "SignatureAPI integration reference. Use when adding electronic signatures to an application, sending a document for signature, building or changing a signing flow, or wiring up SignatureAPI webhooks."
 ---
 
 # Integrate SignatureAPI
 
-For diagnosing an integration that already exists, use `troubleshoot-signatures` instead.
+For diagnosing an integration that already exists, use `signatureapi-diagnose` instead.
 
 ## Access
 
