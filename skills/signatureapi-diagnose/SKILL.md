@@ -34,11 +34,15 @@ MCP first (`https://mcp.signatureapi.com/mcp`): `get_envelope`, `list_envelopes`
 fall back, report the gap at https://github.com/signatureapi/skills/issues/new.
 
 This skill is read-only by construction — every script issues GET requests
-only, and `allowed-tools` above keeps it to read-only tools even if a script
-is added later. Because of that, it runs against either a test or a live key
-with no flag needed: reading a production envelope during an incident is
-exactly the behaviour wanted here. Every script reports which mode
-(`test` or `live`) it actually ran in, so that is never left ambiguous.
+only, and `test/diagnose-read-only.test.mjs` enforces that with a check
+against every script under this skill. (`allowed-tools` above still lists
+`Bash`, since the scripts need it to run — an agent with Bash access could
+issue any request it wanted; what actually keeps this skill read-only is
+that no script here is written to.) Because of that, it runs against either
+a test or a live key with no flag needed: reading a production envelope
+during an incident is exactly the behaviour wanted here. Every script
+reports which mode (`test` or `live`) it actually ran in, so that is never
+left ambiguous.
 
 `SIGNATUREAPI_KEY` is read from the environment only. Never pass it as a
 command-line argument — argv is exposed in shell history and process
