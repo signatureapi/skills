@@ -56,9 +56,9 @@ if (envelopeId) {
     const recipient = candidates.find((r) => r?.ceremony?.url);
 
     if (!recipient) {
-      fail("CEREMONY_URL_NOT_RETURNED", "ceremony.url is null for this recipient. It is null for email_link authentication (the default) since possession of the emailed link is the recipient's authentication.", [
-        "Read the link from the email log: MCP list_emails --envelope <id>, then get_email",
-        'Or create the recipient with "ceremony": {"authentication": [{"type": "email_code"}]} to have ceremony.url returned directly',
+      fail("CEREMONY_URL_NOT_RETURNED", "ceremony.url is null for this recipient. It is null for email_link authentication (the API default) since possession of the emailed link is the recipient's authentication — and this script cannot read the email log itself.", [
+        "Read the link from the email log yourself: MCP list_emails --envelope <id>, then get_email, then re-run with --url",
+        "Or recreate the envelope with create-test-envelope.mjs, whose default custom authentication returns ceremony.url directly",
       ]);
     }
     url = recipient.ceremony.url;

@@ -3,10 +3,23 @@ import { ok, fail, requireTestKey } from "./lib/output.mjs";
 
 const API = process.env.SIGNATUREAPI_BASE_URL ?? "https://api.signatureapi.com/v1";
 
-export function buildEnvelope({ title, documentUrl, recipientName, recipientEmail, auth = "email_link" }) {
+export function buildEnvelope({ title, documentUrl, recipientName, recipientEmail, auth = "custom" }) {
   const recipient = { type: "signer", key: "signer", name: recipientName, email: recipientEmail };
   if (auth === "email_code") {
     recipient.ceremony = { authentication: [{ type: "email_code" }] };
+  } else if (auth === "custom") {
+    recipient.ceremony = {
+      authentication: [
+        {
+          type: "custom",
+          provider: "No identity verification performed",
+          data: {
+            Warning:
+              "Test-mode envelope created by the integrate-signatures skill to verify an integration end to end. No recipient identity check was performed.",
+          },
+        },
+      ],
+    };
   }
   return {
     title,
@@ -35,10 +48,10 @@ if (import.meta.url === `file://${process.argv[1]}`) {
       "node create-test-envelope.mjs --document-url https://example.com/agreement.pdf",
     ]);
   }
-  const auth = arg("auth", "email_link");
-  if (auth !== "email_code" && auth !== "email_link") {
-    fail("INVALID_AUTH", `--auth must be "email_code" or "email_link", got "${auth}".`, [
-      "node create-test-envelope.mjs --document-url <url> --auth email_code",
+  const auth = arg("auth", "custom");
+  if (auth !== "custom" && auth !== "email_code" && auth !== "email_link") {
+    fail("INVALID_AUTH", `--auth must be "custom", "email_code", or "email_link", got "${auth}".`, [
+      "node create-test-envelope.mjs --document-url <url> --auth email_link",
     ]);
   }
   const body = buildEnvelope({
