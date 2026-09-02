@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { buildEnvelope } from "../skills/engineering/integrate-signatures/scripts/create-test-envelope.mjs";
 
-test("buildEnvelope defaults to email_code authentication", () => {
+test("buildEnvelope defaults to email_link authentication (omits the ceremony object)", () => {
   const body = buildEnvelope({
     title: "Test agreement",
     documentUrl: "https://example.com/a.pdf",
@@ -14,16 +14,16 @@ test("buildEnvelope defaults to email_code authentication", () => {
   assert.equal(body.documents[0].places[0].type, "signature");
   assert.equal(body.documents[0].places[0].recipient_key, body.recipients[0].key);
   assert.equal(body.recipients[0].type, "signer");
-  assert.deepEqual(body.recipients[0].ceremony, { authentication: [{ type: "email_code" }] });
+  assert.equal("ceremony" in body.recipients[0], false);
 });
 
-test("buildEnvelope with --auth email_link omits the ceremony object", () => {
+test("buildEnvelope with --auth email_code produces the ceremony authentication object", () => {
   const body = buildEnvelope({
     title: "Test agreement",
     documentUrl: "https://example.com/a.pdf",
     recipientName: "Jane Doe",
     recipientEmail: "jane@example.com",
-    auth: "email_link",
+    auth: "email_code",
   });
-  assert.equal("ceremony" in body.recipients[0], false);
+  assert.deepEqual(body.recipients[0].ceremony, { authentication: [{ type: "email_code" }] });
 });
