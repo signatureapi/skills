@@ -23,12 +23,20 @@ test("every script under skills/ and every references/ file opens with a header 
   const { stdout } = await execFileAsync("git", ["ls-files", "skills"]);
   const files = stdout.split("\n").filter(Boolean).filter((f) => {
     const isTopLevelScript = /^skills\/[^/]+\/scripts\/[^/]+\.mjs$/.test(f);
+    const isLibScript = /^skills\/[^/]+\/scripts\/lib\/[^/]+\.mjs$/.test(f);
     const isReference = /^skills\/[^/]+\/references\//.test(f);
-    return isTopLevelScript || isReference;
+    return isTopLevelScript || isLibScript || isReference;
   });
   // Sanity check that the filters above actually matched something, so a
-  // future rename can't silently make this test vacuous.
-  assert.ok(files.length >= 8, `expected at least the 8 known scripts, found ${files.length}: ${files.join(", ")}`);
+  // future rename can't silently make this test vacuous. This must include
+  // scripts/lib/output.mjs — the file that holds the entire live-key gate,
+  // and exactly the kind of file `grep -rl requireTestKey` surfaces to an
+  // agent with no SKILL.md in view.
+  assert.ok(files.length >= 10, `expected at least the 10 known scripts/references, found ${files.length}: ${files.join(", ")}`);
+  assert.ok(
+    files.includes("skills/signatureapi-integrate/scripts/lib/output.mjs"),
+    "expected the lib/output.mjs filter to actually match its file",
+  );
 
   const offenders = [];
   for (const file of files) {
