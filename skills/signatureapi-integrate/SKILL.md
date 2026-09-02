@@ -93,10 +93,17 @@ production recipient: `references/verification-loop.md`.
 **Branch A (default).** Hand the link to the user and wait for them to
 complete it.
 
-**Branch B (only with explicit consent).** If the user asks you to complete
-the ceremony yourself:
+**Branch B.** If the user asks you to complete the ceremony yourself:
 
-    node scripts/complete-ceremony.mjs --envelope <envelope id> --url <ceremony url> --i-consent
+    node scripts/complete-ceremony.mjs --envelope <envelope id> --url <ceremony url>
+
+No flag gates this branch, and none should be added: an agent runs
+non-interactively, so any check a flag could enforce is one the agent could
+already satisfy on its own initiative just by passing it — a flag shaped
+like a consent gate would invite the belief that something is being
+enforced when nothing is. What actually keeps this branch safe is
+structural — the script cannot run against a live key at all, because
+`requireTestKey` has no bypass path.
 
 Either branch, confirm with:
 
@@ -114,7 +121,7 @@ Full detail on both branches: `references/verification-loop.md`.
 | `scripts/create-test-envelope.mjs` | Print or create a minimum viable test envelope (`--auth custom\|email_link\|email_code`, default `custom`) |
 | `scripts/watch-events.mjs` | Poll events until the envelope reaches a terminal status |
 | `scripts/webhook-receiver.mjs` | Local receiver that prints arriving events |
-| `scripts/complete-ceremony.mjs` | Branch B browser walk (consent-gated) |
+| `scripts/complete-ceremony.mjs` | Branch B browser walk (test mode only, no bypass) |
 
 Every script prints JSON. Failures are `{"ok": false, "code", "message", "next": [...]}` —
 `next` is the list of commands to run.

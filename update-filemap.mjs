@@ -26,7 +26,7 @@ const FALLBACK_DESCRIPTIONS = {
   "scripts/watch-events.mjs": "Polls envelope events until a terminal status",
   "scripts/webhook-receiver.mjs": "Local HTTP receiver that prints arriving webhook events",
   "scripts/diagnose-envelope.mjs": "Diagnoses why an envelope is stuck or missing a deliverable",
-  "scripts/complete-ceremony.mjs": "Branch B: drives a real browser through a ceremony (consent-gated)",
+  "scripts/complete-ceremony.mjs": "Branch B: drives a real browser through a ceremony (test mode only, no bypass)",
   "scripts/lib/output.mjs": "Shared ok/fail/gap JSON output helpers for every script",
 };
 
