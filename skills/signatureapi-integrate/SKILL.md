@@ -42,6 +42,13 @@ start with `key_test_`. **This skill works in test mode only.**
 command-line argument — argv is exposed in shell history and process
 listings on any shared or logged system.
 
+`SIGNATUREAPI_BASE_URL` (default `https://api.signatureapi.com/v1`) and
+`SIGNATUREAPI_SPEC_URL` (default `https://spec.signatureapi.com/openapi.yaml`,
+read by `openapi-explore.mjs`) can override where these scripts point. Set
+either only to a host you trust: every script sends `SIGNATUREAPI_KEY` as
+the `X-API-Key` header to whatever host is configured, with no host
+allowlist to catch a typo or a compromised value.
+
 Install this skill's one dependency once, then check your setup:
 
     npm i                              # inside this skill directory

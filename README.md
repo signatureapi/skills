@@ -77,6 +77,16 @@ browser through a ceremony, and pulling a verdict for a stuck envelope.
 
 Issues and pull requests are welcome: https://github.com/signatureapi/skills
 
+After changing a skill's `SKILL.md` frontmatter (name, description) or the
+package version, run `npm run manifests` and commit the regenerated
+`.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json`, and
+`agent-skills.json` in the same change — `npm test` fails otherwise. The
+`agent-skills.json` payload is also served from elsewhere (the
+`https://signatureapi.com/.well-known/agent-skills` discovery endpoint), so
+that redeploy has to happen together with the commit, not sometime after
+it — a stale served copy re-introduces the exact stale-manifest problem
+`npm test` exists to catch.
+
 ## License
 
 MIT — see [LICENSE](LICENSE).

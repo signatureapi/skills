@@ -194,10 +194,24 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     // checkSuppliedUrlAgainstEnvelope below for that check.
     recipientKey = arg("recipient");
     const res = await fetch(`${API}/envelopes/${envelopeId}`, { headers: { "X-API-Key": key } });
+    // 401/403/500 are not "not visible" — collapsing them into the same
+    // mode-confusion message as a genuine 404 sends the caller chasing the
+    // wrong problem, and a non-2xx body is a problem-details document, not
+    // an envelope, so it must never reach `envelope = await res.json()`.
+    if (res.status === 401 || res.status === 403) {
+      fail("API_KEY_REJECTED", `The API key was rejected (HTTP ${res.status}) fetching envelope ${envelopeId}.`, [
+        "Check the key at https://dashboard.signatureapi.com/api-keys",
+      ]);
+    }
     if (res.status === 404) {
       fail("ENVELOPE_NOT_VISIBLE_TO_THIS_KEY", `No envelope ${envelopeId} is visible to this key. Test and live are separate namespaces, so this is not a test-mode envelope for this key.`, [
         "Confirm the key's mode: it must be a key_test_... key",
         "Use the envelope id printed by create-test-envelope.mjs",
+      ]);
+    }
+    if (!res.ok) {
+      fail("ENVELOPE_FETCH_FAILED", `HTTP ${res.status} fetching envelope ${envelopeId}.`, [
+        "This is a server-side failure, not a mode/visibility problem — retry, or contact support@signatureapi.com",
       ]);
     }
     envelope = await res.json();

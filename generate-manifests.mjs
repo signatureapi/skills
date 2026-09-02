@@ -8,7 +8,14 @@
 import { readdir, readFile, writeFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
 
-const REPO = "signatureapi/skills";
+// The repo these raw-GitHub URLs and pinned digests assume. This does NOT
+// exist yet as `origin` on this checkout — see the "publish" test in
+// test/generate-manifests.test.mjs, which skips cleanly until it does and
+// then holds this constant to account. Bumping this (or BRANCH) must ship
+// together with `npm run manifests` and a redeploy of whatever serves
+// agent-skills.json (see README's Contributing section) — a stale digest
+// pinned to a mutable branch ref is worse than no digest.
+export const REPO = "signatureapi/skills";
 const BRANCH = "main";
 
 /** Pulls `name` and `description` out of a SKILL.md's YAML frontmatter with
@@ -47,11 +54,11 @@ export async function loadSkills(skillsDir = "skills") {
   return skills;
 }
 
-export function buildPluginJson(skills) {
+export function buildPluginJson(skills, version) {
   return {
     name: "signatureapi",
     displayName: "SignatureAPI",
-    version: "1.0.0",
+    version,
     description:
       "SignatureAPI e-signature skills, kept in sync with the hosted MCP server configuration so the same install delivers both.",
     author: {
@@ -112,8 +119,9 @@ function json(obj) {
  * assert the committed files already match. */
 export async function generate() {
   const skills = await loadSkills();
+  const { version } = JSON.parse(await readFile("package.json", "utf8"));
   return {
-    ".claude-plugin/plugin.json": json(buildPluginJson(skills)),
+    ".claude-plugin/plugin.json": json(buildPluginJson(skills, version)),
     ".claude-plugin/marketplace.json": json(buildMarketplaceJson(skills)),
     "agent-skills.json": json(buildAgentSkillsJson(skills)),
   };

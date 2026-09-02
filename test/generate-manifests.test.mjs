@@ -2,12 +2,17 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
 import {
   parseSkillFrontmatter,
   loadSkills,
   buildAgentSkillsJson,
   generate,
+  REPO,
 } from "../generate-manifests.mjs";
+
+const execFileAsync = promisify(execFile);
 
 test("parseSkillFrontmatter reads name and description out of the YAML frontmatter block", () => {
   const text = [
@@ -56,4 +61,29 @@ test("generated manifests have no diff against the committed files", async () =>
     const actual = await readFile(path, "utf8");
     assert.equal(actual, expected, `${path} is out of sync — run npm run manifests`);
   }
+});
+
+// agent-skills.json pins raw-GitHub URLs to REPO/BRANCH and pins content
+// digests to those URLs' bytes at generation time — a mutable branch ref
+// backing a byte-pinned digest. That's only coherent if REPO is actually
+// where this checkout publishes from. This repo has no `origin` remote yet
+// (that's the state today — the repo doesn't exist publicly), so the check
+// skips cleanly rather than failing; once a real origin is set, this starts
+// enforcing that REPO tracks it, so the two can't silently diverge.
+test("generate-manifests.mjs's REPO constant matches the origin remote, when one is configured", async (t) => {
+  let remoteUrl;
+  try {
+    ({ stdout: remoteUrl } = await execFileAsync("git", ["remote", "get-url", "origin"]));
+  } catch {
+    t.skip("no origin remote configured yet — nothing to check against");
+    return;
+  }
+  remoteUrl = remoteUrl.trim();
+  const match = remoteUrl.match(/github\.com[:/]([^/]+\/[^/]+?)(\.git)?$/);
+  assert.ok(match, `origin remote "${remoteUrl}" is not a recognizable GitHub URL`);
+  assert.equal(
+    match[1],
+    REPO,
+    `generate-manifests.mjs's REPO ("${REPO}") does not match the origin remote ("${match[1]}") — update REPO, run npm run manifests, and redeploy the agent-skills.json payload together (see README's Contributing section)`,
+  );
 });
