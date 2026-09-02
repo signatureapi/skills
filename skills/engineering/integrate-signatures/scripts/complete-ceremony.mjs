@@ -99,6 +99,59 @@ export function checkSuppliedUrlAgainstEnvelope(envelope, suppliedUrl, recipient
   return { ok: true };
 }
 
+/**
+ * Which recipient's ceremony the script is about to drive, so the completion
+ * check at the end polls the right recipient. Prefers an explicit
+ * --recipient. Otherwise matches by ceremony_id (see extractCeremonyId) plus
+ * origin, the same stable-identity comparison checkSuppliedUrlAgainstEnvelope
+ * uses — the URL string itself is re-minted on every fetch, so it cannot be
+ * compared literally.
+ */
+export function resolveTargetRecipientKey(envelope, url, recipientKeyArg) {
+  if (recipientKeyArg) return recipientKeyArg;
+  const recipients = envelope?.recipients ?? [];
+  const targetId = extractCeremonyId(url);
+  if (!targetId) return null;
+  const targetOrigin = originOf(url);
+  const match = recipients.find((r) => {
+    const rUrl = r?.ceremony?.url;
+    if (!rUrl) return false;
+    return extractCeremonyId(rUrl) === targetId && originOf(rUrl) === targetOrigin;
+  });
+  return match?.key ?? null;
+}
+
+const TERMINAL_NON_COMPLETED_RECIPIENT_STATUSES = ["rejected", "soft_bounced", "hard_bounced", "failed", "replaced"];
+
+/**
+ * The only source of truth for "did this ceremony actually complete": polls
+ * GET /envelopes/{id} until the target recipient reaches `completed`, or a
+ * terminal non-completed status, or the timeout expires. The browser walk
+ * finishing without error proves nothing by itself — SIG-1222's found defect
+ * was exactly a script that reported success after a walk whose clicks
+ * silently no-op'd. This is the check that replaces that false claim.
+ */
+export async function pollForRecipientCompletion({ api, envelopeId, recipientKey, key, timeoutMs, intervalMs = 3000 }) {
+  const started = Date.now();
+  let lastEnvelope = null;
+  do {
+    const res = await fetch(`${api}/envelopes/${envelopeId}`, { headers: { "X-API-Key": key } });
+    if (res.ok) {
+      lastEnvelope = await res.json();
+      const recipients = lastEnvelope?.recipients ?? [];
+      const recipient = recipientKey ? recipients.find((r) => r.key === recipientKey) : recipients[0];
+      if (recipient?.status === "completed") {
+        return { completed: true, envelope: lastEnvelope, recipient };
+      }
+      if (recipient && TERMINAL_NON_COMPLETED_RECIPIENT_STATUSES.includes(recipient.status)) {
+        return { completed: false, envelope: lastEnvelope, recipient };
+      }
+    }
+    if (Date.now() - started < timeoutMs) await new Promise((r) => setTimeout(r, intervalMs));
+  } while (Date.now() - started < timeoutMs);
+  return { completed: false, envelope: lastEnvelope, recipient: null };
+}
+
 if (import.meta.url === `file://${process.argv[1]}`) {
   const allowLive = process.argv.includes("--allow-live");
   const key = requireTestKey(process.env.SIGNATUREAPI_KEY, allowLive);
@@ -127,6 +180,8 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   }
 
   let url = escapeHatchUrl;
+  let envelope = null;
+  let recipientKey = null;
 
   if (envelopeId) {
     // Fetching the envelope with the test key IS the mode gate: test and live
@@ -134,7 +189,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     // It proves the id is test-mode. It does NOT, by itself, prove that a
     // separately-supplied --url belongs to this envelope — see
     // checkSuppliedUrlAgainstEnvelope below for that check.
-    const recipientKey = arg("recipient");
+    recipientKey = arg("recipient");
     const res = await fetch(`${API}/envelopes/${envelopeId}`, { headers: { "X-API-Key": key } });
     if (res.status === 404) {
       fail("ENVELOPE_NOT_VISIBLE_TO_THIS_KEY", `No envelope ${envelopeId} is visible to this key. Test and live are separate namespaces, so this is not a test-mode envelope for this key.`, [
@@ -142,7 +197,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
         "Use the envelope id printed by create-test-envelope.mjs",
       ]);
     }
-    const envelope = await res.json();
+    envelope = await res.json();
 
     if (url) {
       const check = checkSuppliedUrlAgainstEnvelope(envelope, url, recipientKey, allowLive);
@@ -176,6 +231,11 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     ]);
   }
 
+  // Who the completion check at the end verifies, resolved before driving
+  // the browser so a typed-signature fallback has a name to use (see below).
+  const targetRecipientKey = resolveTargetRecipientKey(envelope, url, recipientKey);
+  const targetRecipient = (envelope?.recipients ?? []).find((r) => r.key === targetRecipientKey);
+
   const browser = await chromium.launch();
   const page = await browser.newPage();
   await page.goto(url, { waitUntil: "networkidle" });
@@ -185,35 +245,202 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     await page.mouse.move(100 + i * 40, 150 + i * 25, { steps: 4 });
   }
 
-  try {
-    await page.getByRole("button", { name: /start|begin|continue/i }).first().click({ timeout: 5000 });
-  } catch { /* some ceremonies open straight into the document */ }
+  let walkLastStep = "loaded the ceremony page";
 
-  await page.waitForTimeout(1000);
+  const DECLINE_LIKE = /decline|reject|refuse/i;
 
-  try {
-    await page.getByRole("button", { name: /sign|approve|finish|complete|submit/i }).first().click({ timeout: 15000 });
-  } catch {
+  /**
+   * Click one specific, named control. Never falls through to a looser
+   * match: if the control cannot be found, the walk fails loudly with what
+   * WAS on the page instead of guessing at something else that might match.
+   * Also refuses to click anything whose own visible text reads as a
+   * decline/reject/refuse action — belt-and-suspenders on top of using
+   * specific ids/labels instead of a generic "primary action" regex hunt,
+   * which is what let SIG-1222's script click "Decline to sign".
+   */
+  async function clickStep({ step, locator, name, timeout = 15000, required = true }) {
+    walkLastStep = step;
+    try {
+      await locator.waitFor({ state: "visible", timeout });
+    } catch {
+      if (!required) return false;
+      const visibleButtons = await page.getByRole("button").allTextContents().catch(() => []);
+      await browser.close();
+      fail("CEREMONY_WALK_STEP_NOT_FOUND", `Could not find "${name}" while ${step}.`, [
+        `Buttons visible on the page at that point: ${JSON.stringify(visibleButtons.filter(Boolean))}`,
+        "Re-run with PWDEBUG=1 to watch the browser",
+        "The ceremony UI may differ from the sequence this script expects (place types/auth can vary) — inspect and update the selectors",
+      ]);
+    }
+    const text = ((await locator.textContent().catch(() => "")) || "").trim();
+    if (DECLINE_LIKE.test(text)) {
+      await browser.close();
+      fail("CEREMONY_DECLINE_CONTROL_MATCHED", `While ${step}, the "${name}" selector matched a control labeled "${text}", which reads as a decline/reject/refuse action. Refusing to click it — signing scripts must never be able to trigger a decline.`, [
+        "Narrow the selector for this step; it is matching the wrong control",
+      ]);
+    }
+    await locator.click({ timeout });
+    return true;
+  }
+
+  async function checkAllCheckboxes(scopeLocator) {
+    const boxes = scopeLocator.locator('input[type="checkbox"]');
+    const count = await boxes.count();
+    for (let i = 0; i < count; i++) {
+      const box = boxes.nth(i);
+      if (!(await box.isChecked().catch(() => false))) await box.check({ timeout: 5000 });
+    }
+    return count;
+  }
+
+  // Step 1: disclosure checkbox(es) + "Agree and Continue" — the consent
+  // modal. Some ceremonies (already-consented resumes, certain embeds) skip
+  // it, so its absence is tolerated; but once found, "Agree and Continue"
+  // must be there too.
+  walkLastStep = "checking for the disclosure/consent modal";
+  const consentModal = page.locator("#concent-modal");
+  const consentModalPresent = await consentModal
+    .waitFor({ state: "visible", timeout: 8000 })
+    .then(() => true)
+    .catch(() => false);
+  if (consentModalPresent) {
+    walkLastStep = "checking the disclosure agreement checkbox(es)";
+    await checkAllCheckboxes(consentModal);
+    await clickStep({
+      step: "clicking Agree and Continue",
+      locator: page.locator("#continue-consent-button"),
+      name: "Agree and Continue",
+      timeout: 10000,
+    });
+  }
+
+  // Step 2: "Start" — begins signing / scrolls to the first place. Some
+  // ceremonies open straight into the document with nothing to click here.
+  await clickStep({
+    step: "clicking Start",
+    locator: page.locator("#primary-button:visible, #primary-button-inline:visible").first(),
+    name: "Start",
+    timeout: 8000,
+    required: false,
+  });
+
+  // Step 3: click the signature box to open the adoption modal.
+  await clickStep({
+    step: "clicking the signature box",
+    locator: page.locator('button[aria-label="Sign here"]').first(),
+    name: "signature box",
+    timeout: 15000,
+  });
+
+  // Step 4: the signature adoption modal — fill the typed signature (usually
+  // pre-filled with the recipient's name; fill it explicitly if it isn't),
+  // check the adoption agreement checkbox, then "Adopt and Sign".
+  walkLastStep = "waiting for the signature adoption modal";
+  const adoptionModal = page.locator("#adoption-modal");
+  const adoptionModalPresent = await adoptionModal
+    .waitFor({ state: "visible", timeout: 15000 })
+    .then(() => true)
+    .catch(() => false);
+  if (!adoptionModalPresent) {
     await browser.close();
-    fail("CEREMONY_ACTION_NOT_FOUND", "Could not find the primary ceremony action.", [
+    fail("CEREMONY_WALK_STEP_NOT_FOUND", 'Could not find the signature adoption modal after clicking the signature box.', [
       "Re-run with PWDEBUG=1 to watch the browser",
-      "Or use Branch A: hand the link to the user",
+      "The ceremony UI may differ from the sequence this script expects — inspect and update the selectors",
     ]);
   }
 
-  // Fallback: if organic input was not detected, a consent modal appears instead
-  // of submitting. Confirming it is itself the deliberate act.
-  try {
-    await page.getByRole("button", { name: /confirm|yes|continue/i }).first().click({ timeout: 4000 });
-  } catch { /* no modal — the click submitted directly */ }
+  walkLastStep = "filling the typed signature";
+  const typedInput = adoptionModal.locator("#typed_symbol");
+  if (await typedInput.count()) {
+    const current = await typedInput.inputValue().catch(() => "");
+    if (!current.trim()) {
+      await typedInput.fill(targetRecipient?.name || "Signature", { timeout: 5000 });
+    }
+  }
 
-  await page.waitForTimeout(3000);
+  walkLastStep = "checking the signature adoption agreement checkbox(es)";
+  await checkAllCheckboxes(adoptionModal);
+
+  await clickStep({
+    step: "clicking Adopt and Sign",
+    locator: page.locator("#adopt-button"),
+    name: "Adopt and Sign",
+    timeout: 10000,
+  });
+
+  walkLastStep = "waiting for the adoption modal to close";
+  await adoptionModal.waitFor({ state: "hidden", timeout: 10000 }).catch(() => {});
+
+  // Step 5: "Finish" — submits the ceremony.
+  await clickStep({
+    step: "clicking Finish",
+    locator: page.locator("#primary-button:visible, #primary-button-inline:visible").first(),
+    name: "Finish",
+    timeout: 15000,
+  });
+
+  // Fallback: if organic input was not detected, a completion consent modal
+  // appears instead of submitting directly. Confirming it is itself the
+  // deliberate act.
+  await clickStep({
+    step: "confirming the completion consent fallback modal (if shown)",
+    locator: page.locator('[data-testid="completion-consent-confirm"]'),
+    name: "confirm",
+    timeout: 4000,
+    required: false,
+  });
+
+  await page.waitForTimeout(2000);
   const finalUrl = page.url();
   await browser.close();
 
+  if (!envelopeId) {
+    // No --envelope means no envelope id to poll — this is the bare --url
+    // --allow-live escape hatch. The walk cannot be verified server-side in
+    // this mode; say so plainly rather than reporting unverified success as
+    // if it were confirmed.
+    ok({
+      walked: true,
+      verified: false,
+      warning: "No --envelope was supplied, so recipient completion could not be confirmed against GET /envelopes/{id}. This result is NOT a verified success.",
+      final_url: finalUrl,
+      next: ["node scripts/watch-events.mjs --envelope <envelope id>"],
+    });
+  }
+
+  // The walk finishing without a thrown error proves nothing by itself — it
+  // is exactly what the original, defective version of this script reported
+  // as success on. The only thing that counts is the server's own view of
+  // the recipient.
+  const completeTimeoutMs = Number(arg("timeout", "120")) * 1000;
+  const result = await pollForRecipientCompletion({
+    api: API,
+    envelopeId,
+    recipientKey: targetRecipientKey,
+    key,
+    timeoutMs: completeTimeoutMs,
+  });
+
+  if (!result.completed) {
+    fail(
+      "CEREMONY_WALK_DID_NOT_COMPLETE",
+      `The browser walk finished (last step believed performed: "${walkLastStep}") but the recipient never reached "completed". Actual recipient status: ${result.recipient?.status ?? "unknown — envelope was not reachable while polling"}.`,
+      [
+        `curl -sS -H "X-API-Key: $SIGNATUREAPI_KEY" ${API}/envelopes/${envelopeId}`,
+        "Re-run with PWDEBUG=1 to watch the browser and see where the walk actually diverged from the expected sequence",
+        "node scripts/watch-events.mjs --envelope " + envelopeId,
+      ],
+    );
+  }
+
   ok({
     walked: true,
+    verified: true,
+    envelope_id: envelopeId,
+    envelope_status: result.envelope.status,
+    recipient_key: targetRecipientKey,
+    recipient_status: result.recipient.status,
     final_url: finalUrl,
-    next: ["node scripts/watch-events.mjs --envelope <envelope id>"],
+    next: ["node scripts/watch-events.mjs --envelope " + envelopeId],
   });
 }
