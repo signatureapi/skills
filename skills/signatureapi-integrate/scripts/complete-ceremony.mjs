@@ -252,6 +252,41 @@ if (import.meta.url === `file://${process.argv[1]}`) {
 
   const DECLINE_LIKE = /decline|reject|refuse/i;
 
+  // The supported DOM contract (added alongside this change): stable
+  // `data-ceremony-step` attributes on the elements each step of this walk
+  // needs. This is the PRIMARY selector for every step below. The private
+  // ids/labels this script used before (`#continue-consent-button`,
+  // `#primary-button`/`#primary-button-inline`,
+  // `button[aria-label="Sign here"]`, `#typed_symbol`, `#adopt-button`, the
+  // consent/adoption checkboxes) are kept as a FALLBACK, because the new
+  // attributes are not deployed to staging or production yet — a walker that
+  // only understood the new contract would break against every
+  // currently-deployed environment. Once every environment ships the new
+  // attributes, `privateSelector` arguments below (and the fallback branch
+  // of stepLocator/noteFallbackIfUsed) can be deleted.
+  const fallbackStepsUsed = [];
+
+  /** Combines the primary `data-ceremony-step` selector with the private
+   * fallback selector into one Playwright locator (comma-separated CSS
+   * selectors match on either). `modifier` lets a caller add a pseudo-class
+   * like `:visible` to the primary half, matching what the private half
+   * already carries. */
+  function stepLocator(scope, dataStep, privateSelector, modifier = "") {
+    return scope.locator(`[data-ceremony-step="${dataStep}"]${modifier}, ${privateSelector}`);
+  }
+
+  /** Records (and prints) when a step's match came only from the private
+   * fallback selector, i.e. the new `data-ceremony-step` attribute was not
+   * present — so we can see from the output when the transition to the new
+   * contract is complete across environments. */
+  async function noteFallbackIfUsed(scope, dataStep) {
+    const primaryCount = await scope.locator(`[data-ceremony-step="${dataStep}"]`).count().catch(() => 0);
+    if (primaryCount === 0) {
+      fallbackStepsUsed.push(dataStep);
+      console.error(`[complete-ceremony] step "${dataStep}": data-ceremony-step attribute not found, used private-id fallback selector (remove once deployed everywhere)`);
+    }
+  }
+
   /**
    * Click one specific, named control. Never falls through to a looser
    * match: if the control cannot be found, the walk fails loudly with what
@@ -261,7 +296,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
    * specific ids/labels instead of a generic "primary action" regex hunt,
    * which is what let SIG-1222's script click "Decline to sign".
    */
-  async function clickStep({ step, locator, name, timeout = 15000, required = true }) {
+  async function clickStep({ step, locator, dataStep, scope, name, timeout = 15000, required = true }) {
     walkLastStep = step;
     try {
       await locator.waitFor({ state: "visible", timeout });
@@ -275,6 +310,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
         "The ceremony UI may differ from the sequence this script expects (place types/auth can vary) — inspect and update the selectors",
       ]);
     }
+    if (dataStep) await noteFallbackIfUsed(scope ?? page, dataStep);
     const text = ((await locator.textContent().catch(() => "")) || "").trim();
     if (DECLINE_LIKE.test(text)) {
       await browser.close();
@@ -301,17 +337,20 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   // it, so its absence is tolerated; but once found, "Agree and Continue"
   // must be there too.
   walkLastStep = "checking for the disclosure/consent modal";
-  const consentModal = page.locator("#concent-modal");
+  const consentModal = stepLocator(page, "disclosure", "#concent-modal");
   const consentModalPresent = await consentModal
     .waitFor({ state: "visible", timeout: 8000 })
     .then(() => true)
     .catch(() => false);
   if (consentModalPresent) {
+    await noteFallbackIfUsed(page, "disclosure");
     walkLastStep = "checking the disclosure agreement checkbox(es)";
     await checkAllCheckboxes(consentModal);
     await clickStep({
       step: "clicking Agree and Continue",
-      locator: page.locator("#continue-consent-button"),
+      locator: stepLocator(page, "disclosure-continue", "#continue-consent-button"),
+      dataStep: "disclosure-continue",
+      scope: page,
       name: "Agree and Continue",
       timeout: 10000,
     });
@@ -321,16 +360,20 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   // ceremonies open straight into the document with nothing to click here.
   await clickStep({
     step: "clicking Start",
-    locator: page.locator("#primary-button:visible, #primary-button-inline:visible").first(),
+    locator: stepLocator(page, "start", "#primary-button:visible, #primary-button-inline:visible", ":visible").first(),
+    dataStep: "start",
+    scope: page,
     name: "Start",
     timeout: 8000,
     required: false,
   });
 
-  // Step 3: click the signature box to open the adoption modal.
+  // Step 3: click the signature box (a "place") to open the adoption modal.
   await clickStep({
     step: "clicking the signature box",
-    locator: page.locator('button[aria-label="Sign here"]').first(),
+    locator: stepLocator(page, "place", 'button[aria-label="Sign here"]').first(),
+    dataStep: "place",
+    scope: page,
     name: "signature box",
     timeout: 15000,
   });
@@ -339,7 +382,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   // pre-filled with the recipient's name; fill it explicitly if it isn't),
   // check the adoption agreement checkbox, then "Adopt and Sign".
   walkLastStep = "waiting for the signature adoption modal";
-  const adoptionModal = page.locator("#adoption-modal");
+  const adoptionModal = stepLocator(page, "adopt", "#adoption-modal");
   const adoptionModalPresent = await adoptionModal
     .waitFor({ state: "visible", timeout: 15000 })
     .then(() => true)
@@ -351,10 +394,12 @@ if (import.meta.url === `file://${process.argv[1]}`) {
       "The ceremony UI may differ from the sequence this script expects — inspect and update the selectors",
     ]);
   }
+  await noteFallbackIfUsed(page, "adopt");
 
   walkLastStep = "filling the typed signature";
-  const typedInput = adoptionModal.locator("#typed_symbol");
+  const typedInput = stepLocator(adoptionModal, "signature-input", "#typed_symbol");
   if (await typedInput.count()) {
+    await noteFallbackIfUsed(adoptionModal, "signature-input");
     const current = await typedInput.inputValue().catch(() => "");
     if (!current.trim()) {
       await typedInput.fill(targetRecipient?.name || "Signature", { timeout: 5000 });
@@ -366,7 +411,9 @@ if (import.meta.url === `file://${process.argv[1]}`) {
 
   await clickStep({
     step: "clicking Adopt and Sign",
-    locator: page.locator("#adopt-button"),
+    locator: stepLocator(page, "adopt-apply", "#adopt-button"),
+    dataStep: "adopt-apply",
+    scope: page,
     name: "Adopt and Sign",
     timeout: 10000,
   });
@@ -377,7 +424,9 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   // Step 5: "Finish" — submits the ceremony.
   await clickStep({
     step: "clicking Finish",
-    locator: page.locator("#primary-button:visible, #primary-button-inline:visible").first(),
+    locator: stepLocator(page, "finish", "#primary-button:visible, #primary-button-inline:visible", ":visible").first(),
+    dataStep: "finish",
+    scope: page,
     name: "Finish",
     timeout: 15000,
   });
@@ -434,6 +483,9 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     recipient_key: targetRecipientKey,
     recipient_status: result.recipient.status,
     final_url: finalUrl,
+    // Empty once every environment ships the data-ceremony-step contract —
+    // see the fallback comment above clickStep for what to remove then.
+    contract_fallback_steps: fallbackStepsUsed,
     next: ["node scripts/watch-events.mjs --envelope " + envelopeId],
   });
 }
