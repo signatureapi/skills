@@ -2,8 +2,8 @@
 import { copyFile, mkdir } from "node:fs/promises";
 
 const targets = [
-  "skills/integrate-signatures/scripts/lib/output.mjs",
-  "skills/troubleshoot-signatures/scripts/lib/output.mjs",
+  "skills/engineering/integrate-signatures/scripts/lib/output.mjs",
+  "skills/engineering/troubleshoot-signatures/scripts/lib/output.mjs",
 ];
 
 for (const target of targets) {

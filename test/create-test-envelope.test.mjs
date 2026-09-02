@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { buildEnvelope } from "../skills/integrate-signatures/scripts/create-test-envelope.mjs";
+import { buildEnvelope } from "../skills/engineering/integrate-signatures/scripts/create-test-envelope.mjs";
 
 test("buildEnvelope defaults to email_code authentication", () => {
   const body = buildEnvelope({
