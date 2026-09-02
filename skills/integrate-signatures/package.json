@@ -1,0 +1,6 @@
+{
+  "name": "@signatureapi/integrate-signatures",
+  "private": true,
+  "type": "module",
+  "dependencies": { "yaml": "^2.7.0" }
+}

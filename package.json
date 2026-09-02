@@ -1,0 +1,14 @@
+{
+  "name": "@signatureapi/skills",
+  "version": "1.0.0",
+  "private": false,
+  "description": "Agent Skills for SignatureAPI",
+  "license": "MIT",
+  "type": "module",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "test": "node --test test/",
+    "filemap": "node update-filemap.mjs",
+    "sync-lib": "node sync-lib.mjs"
+  }
+}
