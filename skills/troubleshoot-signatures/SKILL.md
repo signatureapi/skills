@@ -42,8 +42,7 @@ test-mode email log exposes it.
 Check for a `deliverable.generated` event, then `GET /envelopes/{id}/deliverables`.
 
 ### 422 on create
-The response is RFC 7807 problem details; `detail` names the offending field.
-Most common cause: a place's `recipient_key` matches no recipient `key`.
+See `references/errors.md` for the response shape and the most common cause.
 Check the exact schema with `search_documentation` (MCP) or the OpenAPI spec at
 `https://api.signatureapi.com/openapi.json`.
 

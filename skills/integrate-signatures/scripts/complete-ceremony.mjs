@@ -1,22 +1,63 @@
 #!/usr/bin/env node
-import { ok, fail } from "./lib/output.mjs";
+import { ok, fail, requireTestKey } from "./lib/output.mjs";
+
+const API = process.env.SIGNATUREAPI_BASE_URL ?? "https://api.signatureapi.com/v1";
 
 function arg(name, fallback) {
   const i = process.argv.indexOf(`--${name}`);
   return i === -1 ? fallback : process.argv[i + 1];
 }
 
-const url = arg("url");
-if (!url) {
-  fail("MISSING_CEREMONY_URL", "Pass --url <ceremony url>.", [
-    "MCP: list_emails --envelope <id>, then get_email to read ceremony_url",
+const key = requireTestKey(process.env.SIGNATUREAPI_KEY, process.argv.includes("--allow-live"));
+
+const escapeHatchUrl = arg("url");
+const envelopeId = arg("envelope");
+
+if (escapeHatchUrl && !process.argv.includes("--allow-live")) {
+  fail("URL_REQUIRES_ALLOW_LIVE", "An escape-hatch --url cannot be proven to be a test-mode ceremony. Pass --allow-live alongside --url to confirm you accept that risk, or use --envelope instead so the key itself proves test mode.", [
+    "Prefer: node scripts/complete-ceremony.mjs --envelope <id> --i-consent",
+    "Or re-run with: --url <url> --allow-live --i-consent",
   ]);
 }
+
+if (!escapeHatchUrl && !envelopeId) {
+  fail("MISSING_ENVELOPE_ID", "Pass --envelope <id> (preferred) or --url <ceremony url> --allow-live.", [
+    "node scripts/complete-ceremony.mjs --envelope <id> --i-consent",
+  ]);
+}
+
 if (!process.argv.includes("--i-consent")) {
   fail("CONSENT_REQUIRED", "This drives a real browser through a signing ceremony. Test mode only, and only with the user's explicit consent.", [
     "Ask the user to confirm, then re-run with --i-consent",
     "Or use Branch A: hand the ceremony link to the user and wait",
   ]);
+}
+
+let url = escapeHatchUrl;
+
+if (!url) {
+  const recipientKey = arg("recipient");
+  const res = await fetch(`${API}/envelopes/${envelopeId}`, { headers: { "X-API-Key": key } });
+  if (res.status === 404) {
+    fail("ENVELOPE_NOT_VISIBLE_TO_THIS_KEY", `No envelope ${envelopeId} is visible to this key. Test and live are separate namespaces, so this is not a test-mode envelope for this key.`, [
+      "Confirm the key's mode: it must be a key_test_... key",
+      "Use the envelope id printed by create-test-envelope.mjs",
+    ]);
+  }
+  const envelope = await res.json();
+  const recipients = envelope?.recipients ?? [];
+  const candidates = recipientKey
+    ? recipients.filter((r) => r.key === recipientKey)
+    : recipients;
+  const recipient = candidates.find((r) => r?.ceremony?.url);
+
+  if (!recipient) {
+    fail("CEREMONY_URL_NOT_RETURNED", "ceremony.url is null for this recipient. It is always null for email_link authentication, since possession of the emailed link is the recipient's authentication.", [
+      'Create the recipient with "ceremony": {"authentication": [{"type": "email_code"}]} to have ceremony.url returned directly',
+      "Or read the link from the email log: MCP list_emails --envelope <id>, then get_email",
+    ]);
+  }
+  url = recipient.ceremony.url;
 }
 
 let chromium;
@@ -67,5 +108,5 @@ await browser.close();
 ok({
   walked: true,
   final_url: finalUrl,
-  next: ["node watch-events.mjs --envelope <envelope id>"],
+  next: ["node scripts/watch-events.mjs --envelope <envelope id>"],
 });
