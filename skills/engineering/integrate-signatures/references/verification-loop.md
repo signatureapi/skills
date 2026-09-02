@@ -4,23 +4,34 @@ Creating an envelope does not prove a recipient can sign it. Two branches close
 that loop — both start the same way and only diverge at the point where a human
 would normally click the link.
 
-Test mode only. In live mode `ceremony.url` is always `null` for `email_link`
-authentication by design: possession of the emailed link *is* the recipient's
-authentication, so the API never exposes it outside the email itself. Use
-`email_code` authentication on the recipient to have `ceremony.url` returned
-directly instead.
+Test mode only. `ceremony.url` is `null` for `email_link` authentication by
+design — in test mode and live mode alike: possession of the emailed link
+*is* the recipient's authentication, so the API never exposes it outside the
+email itself. `email_link` is also the default, so this is the common case.
+Give the recipient `email_code` authentication instead to have `ceremony.url`
+returned directly on the create response — but the signer still has to type
+the code, and that code itself only ever lives in the email log, so
+`email_code` does not remove the email lookup, it only moves it to the
+signer's side.
 
-## Getting to the link (both branches)
+## Getting to the link
+
+**Default (`email_link`), or to read the `email_code` code the signer needs**:
 
 1. Create a test envelope with a recipient.
 2. `list_emails` filtered by `envelope_id` to find the emails SignatureAPI
    generated for it.
 3. Pick the `request`-type email (the signing invitation, not a receipt or
    deliverable notice).
-4. `get_email` on that email's id and read `ceremony_url` from the response.
+4. `get_email` on that email's id and read `ceremony_url` (and, for
+   `email_code`, the code) from the response.
 
 If MCP is unavailable, the dashboard email log is the fallback:
 `https://dashboard.signatureapi.com/emails?mode=test`.
+
+**With `--auth email_code`**: the link is also available immediately, with no
+email lookup, at `recipients[].ceremony.url` on the create response itself.
+The signer still needs the code, fetched as above.
 
 ## Branch A — hand it to the human
 
@@ -55,10 +66,16 @@ Playwright to be installed in the project (`npm install --save-dev playwright
 && npx playwright install chromium`); the script reports `PLAYWRIGHT_MISSING`
 with that install command if it isn't.
 
-An already-known URL can be passed directly with `--url <url> --allow-live`,
-but this is an escape hatch: an unverified URL cannot be proven to be test
-mode, which is why it requires `--allow-live` even for a URL that is actually
-test-mode. Prefer `--envelope`.
+If you already have both the envelope id and the URL (for example, resolved
+via `list_emails` → `get_email` under `email_link`), pass both:
+`--envelope <id> --url <url>`. The envelope fetch still proves test mode, so
+`--allow-live` is not needed, and the browser walk uses the URL you supplied
+without re-deriving it from the envelope response.
+
+`--url` alone, with no `--envelope`, is the true escape hatch: an unverified
+URL cannot be proven to be test mode, which is why it requires
+`--allow-live` even for a URL that is actually test-mode. Prefer
+`--envelope`, with or without `--url` alongside it.
 
 After it reports `walked: true`, confirm completion with
 `watch-events.mjs --envelope <id>` — the same verification step as Branch A.

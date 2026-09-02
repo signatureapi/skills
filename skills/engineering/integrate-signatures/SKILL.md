@@ -45,14 +45,17 @@ grep for, and the two mistakes that are easy to make.
    `image/png`, max 5 MB) returns a `url` valid for 24 hours — or use the MCP
    tool `mint_upload_url`.
 2. **Create the envelope.** Print the minimum viable body with
-   `node scripts/create-test-envelope.mjs --dry-run` and adapt it. Every
-   place's `recipient_key` must match a recipient's `key`. Read
-   `references/places.md` for how places bind to a document.
+   `node scripts/create-test-envelope.mjs --dry-run` and adapt it — pass
+   `--auth email_code` to switch the recipient off the default `email_link`
+   authentication. Every place's `recipient_key` must match a recipient's
+   `key`. Read `references/places.md` for how places bind to a document. Then
+   create it for real: re-run the same command without `--dry-run`, or call
+   the MCP tool `create_envelope` with the adapted body.
 3. **Handle events.** A test-mode webhook endpoint is registered in the
-   dashboard — that's the only place a signing secret is issued; there's no
-   API or MCP path to it. Run `node scripts/webhook-receiver.mjs` for a local
-   receiver to point it at. Handle at least `envelope.completed`. Full event
-   list and the local-dev alternative in `references/webhooks.md`.
+   dashboard, which is also where its signing secret is issued — see
+   `references/webhooks.md`. Run `node scripts/webhook-receiver.mjs` for a
+   local receiver to point it at. Handle at least `envelope.completed`. Full
+   event list and the local-dev alternative in `references/webhooks.md`.
 4. **Persist the envelope id** against whatever domain object motivated the
    signature.
 
@@ -67,19 +70,18 @@ Query the spec rather than reading docs pages — the create-envelope page is
 The integration is done when a test-mode envelope has reached `completed` and
 you have observed the completion event.
 
-**Branch A (default).** Give the signer
-`"ceremony": {"authentication": [{"type": "email_code"}]}` when creating the
-envelope. The create response then carries the link directly at
-`recipients[].ceremony.url` — hand that to the user and wait for them to
-complete it, reading any requested code from the email log
-(`list_emails` → `get_email`). With the default `email_link` authentication
-instead, `ceremony.url` is `null` by design and the link exists only in that
-email.
+**Branch A (default).** With the default `email_link` authentication,
+`ceremony.url` is `null` by design and the link exists only in the email
+SignatureAPI sent — reach it via `list_emails` → `get_email`. With
+`--auth email_code`, the link is also on the create response at
+`recipients[].ceremony.url`, but the signer still needs the code from that
+same email. Hand the link to the user and wait for them to complete it. Full
+detail: `references/verification-loop.md`.
 
 **Branch B (only with explicit consent).** If the user asks you to complete
 the ceremony yourself:
 
-    node scripts/complete-ceremony.mjs --url <ceremony url> --i-consent
+    node scripts/complete-ceremony.mjs --envelope <envelope id> --url <ceremony url> --i-consent
 
 Either branch, confirm with:
 
@@ -94,7 +96,7 @@ Full detail on both branches: `references/verification-loop.md`.
 | `scripts/check-setup.mjs` | Credentials, mode and reachability |
 | `scripts/openapi-explore.mjs` | Query the spec: `paths`, `path <method> <path>`, `schema <name>` |
 | `scripts/make-test-document.mjs` | Build and upload a throwaway test PDF |
-| `scripts/create-test-envelope.mjs` | Print or create a minimum viable test envelope |
+| `scripts/create-test-envelope.mjs` | Print or create a minimum viable test envelope (`--auth email_link\|email_code`) |
 | `scripts/watch-events.mjs` | Poll events until the envelope reaches a terminal status |
 | `scripts/webhook-receiver.mjs` | Local receiver that prints arriving events |
 | `scripts/complete-ceremony.mjs` | Branch B browser walk (consent-gated) |
