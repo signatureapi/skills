@@ -3,7 +3,11 @@ import { ok, fail, requireTestKey } from "./lib/output.mjs";
 
 const API = process.env.SIGNATUREAPI_BASE_URL ?? "https://api.signatureapi.com/v1";
 
-export function buildEnvelope({ title, documentUrl, recipientName, recipientEmail }) {
+export function buildEnvelope({ title, documentUrl, recipientName, recipientEmail, auth = "email_code" }) {
+  const recipient = { type: "signer", key: "signer", name: recipientName, email: recipientEmail };
+  if (auth === "email_code") {
+    recipient.ceremony = { authentication: [{ type: "email_code" }] };
+  }
   return {
     title,
     documents: [
@@ -13,7 +17,7 @@ export function buildEnvelope({ title, documentUrl, recipientName, recipientEmai
         places: [{ key: "signer_signature", type: "signature", recipient_key: "signer" }],
       },
     ],
-    recipients: [{ type: "signer", key: "signer", name: recipientName, email: recipientEmail }],
+    recipients: [recipient],
   };
 }
 
@@ -31,11 +35,18 @@ if (import.meta.url === `file://${process.argv[1]}`) {
       "node create-test-envelope.mjs --document-url https://example.com/agreement.pdf",
     ]);
   }
+  const auth = arg("auth", "email_code");
+  if (auth !== "email_code" && auth !== "email_link") {
+    fail("INVALID_AUTH", `--auth must be "email_code" or "email_link", got "${auth}".`, [
+      "node create-test-envelope.mjs --document-url <url> --auth email_code",
+    ]);
+  }
   const body = buildEnvelope({
     title: arg("title", "Test agreement"),
     documentUrl,
     recipientName: arg("recipient-name", "Test Signer"),
     recipientEmail: arg("recipient-email", "test-signer@example.com"),
+    auth,
   });
 
   if (process.argv.includes("--dry-run")) {
@@ -61,12 +72,18 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     ]);
   }
 
+  const ceremonyUrl = payload.recipients?.[0]?.ceremony?.url ?? null;
+
   ok({
     envelope_id: payload.id,
     status: payload.status,
-    next: [
-      `node watch-events.mjs --envelope ${payload.id}`,
-      "MCP: list_emails with envelope_id to find the request email, then get_email for ceremony_url",
-    ],
+    ceremony_url: ceremonyUrl,
+    next: ceremonyUrl
+      ? [`node watch-events.mjs --envelope ${payload.id}`]
+      : [
+          "ceremony_url is null (expected for --auth email_link) — read it from the email instead:",
+          "MCP: list_emails with envelope_id to find the request email, then get_email for ceremony_url",
+          `node watch-events.mjs --envelope ${payload.id}`,
+        ],
   });
 }
