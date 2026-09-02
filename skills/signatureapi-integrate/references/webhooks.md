@@ -29,6 +29,8 @@ options:
 
 - Tunnel `scripts/webhook-receiver.mjs` (e.g. `npx untun@latest tunnel
   http://localhost:4000`) and register the public URL as a test-mode endpoint.
+  It binds to `127.0.0.1` by default (not the LAN-reachable `0.0.0.0`); pass
+  `--host <address>` to bind somewhere else explicitly.
 - Or skip webhooks during development and poll instead:
   `node scripts/watch-events.mjs --envelope <id>`, or `GET
   /envelopes/{id}/events` directly. This is the honest fallback, not a
