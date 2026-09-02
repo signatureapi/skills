@@ -16,6 +16,31 @@ SKILL.md.*
 `deliverable.generated`, `deliverable.failed`, `sender.created`,
 `sender.verified`, `sender.failed`, `sender.deleted`.
 
+## Event payload shape
+
+Every event has the same envelope: `{id, type, timestamp, data: {...}}`.
+`data` always carries `envelope_id`, `object_id`, `object_type`, plus
+fields specific to the event type. Real example, captured from staging
+(`GET /envelopes/{id}/events`):
+
+```json
+{
+  "id": "evt_4ergJwldKlibL9pasqeyPf",
+  "type": "envelope.completed",
+  "timestamp": "2026-09-02T17:34:05.618Z",
+  "data": {
+    "envelope_id": "223c4d7d-10c3-4f69-8b82-f537158fe50a",
+    "object_id": "223c4d7d-10c3-4f69-8b82-f537158fe50a",
+    "object_type": "envelope",
+    "envelope_metadata": {}
+  }
+}
+```
+
+There is no `data.envelope` object — don't guess a nested shape; fetch the
+envelope separately (`GET /envelopes/{id}` or MCP `get_envelope`) if you need
+more than the id.
+
 ## Registering an endpoint
 
 Endpoint registration — and the signing secret it issues — exists only in the
@@ -46,3 +71,32 @@ options:
 
 Handlers must be idempotent — the same event can be delivered more than once.
 Key on the event's `id`, not just its `type`, if you need to deduplicate.
+
+Signature verification needs the raw request bytes, not the parsed body —
+hashing a re-serialized JSON object almost never matches the bytes
+SignatureAPI signed. If the host app parses JSON globally (`app.use(express.json())`
+or equivalent), that parser consumes the body before a route-local raw parser
+ever sees it, and verification fails even though the code looks right. The
+webhook route must be mounted before the global JSON parser, or excluded from
+it — don't copy an existing handler's body-parsing setup without checking
+this. In Express, scope a raw body parser to just the webhook path and
+register it ahead of the global one:
+
+```js
+// Register this BEFORE app.use(express.json()) — order matters.
+app.post(
+  "/webhooks/signatureapi",
+  express.raw({ type: "application/json" }),
+  (req, res) => {
+    // req.body is a Buffer here, not a parsed object — verify the
+    // signature against these raw bytes, then JSON.parse(req.body).
+  },
+);
+
+app.use(express.json()); // applies to every other route
+```
+
+Other frameworks: whatever gives you the unparsed body (a raw-body option,
+a middleware ordered ahead of the JSON parser, a framework hook that runs
+before body parsing) — the rule is the same: verify against bytes the
+framework has not already parsed and re-serialized.
