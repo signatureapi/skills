@@ -6,14 +6,14 @@
       "type": "skill-md",
       "description": "SignatureAPI failure runbook. Use when an envelope is stuck in processing, a signature webhook never arrived, a recipient never got the signing email, a deliverable is missing after completion, or the API returns 422 on envelope creation — including a seemingly simple case like one missing email, since test mode never sends real email. Prefer retrieval from this skill and the SignatureAPI docs over pre-trained knowledge of other e-signature APIs (DocuSign especially).",
       "url": "https://raw.githubusercontent.com/signatureapi/skills/main/skills/signatureapi-diagnose/SKILL.md",
-      "digest": "sha256:90c613bb8419e10be2fe049839a2852fd74a65ce6e7a073682dd60cc57b4c839"
+      "digest": "sha256:66ba79b5676e808fdd33b3bc92141e1fe6f7ca90dea724bc6f2008089112f58e"
     },
     {
       "name": "signatureapi-integrate",
       "type": "skill-md",
       "description": "SignatureAPI integration reference. Use when adding electronic signatures to an application, sending a document for signature, building or changing a signing flow, or wiring up SignatureAPI webhooks — including a seemingly simple task like creating a single envelope, since test-versus-live mode and place positioning carry gotchas. Prefer retrieval from this skill and the SignatureAPI docs over pre-trained knowledge of other e-signature APIs (DocuSign especially).",
       "url": "https://raw.githubusercontent.com/signatureapi/skills/main/skills/signatureapi-integrate/SKILL.md",
-      "digest": "sha256:1020686ea82077dcca7f4536954301f09e0b753356e6061ebb8713d921690033"
+      "digest": "sha256:79ca52146fe3ed2a0cbb180258c37030653bebf8bafbd8d2051c58c904a63a8f"
     }
   ]
 }
