@@ -9,6 +9,7 @@
   "scripts": {
     "test": "node --test",
     "filemap": "node update-filemap.mjs",
-    "sync-lib": "node sync-lib.mjs"
+    "sync-lib": "node sync-lib.mjs",
+    "manifests": "node generate-manifests.mjs"
   }
 }

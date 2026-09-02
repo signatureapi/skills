@@ -6,9 +6,24 @@ directly from the command line.
 
 ## Install
 
-```bash
-npx skills add signatureapi/skills
-```
+Two ways to install this repo, sharing the same skill content:
+
+- **Cross-runtime (Codex, Cursor, Copilot, Claude Code)** — installs just the skills:
+
+  ```bash
+  npx skills add signatureapi/skills
+  ```
+
+- **Claude Code plugin** — installs the same skills *and* configures the hosted SignatureAPI
+  MCP server (`https://mcp.signatureapi.com/mcp`) in one step:
+
+  ```
+  /plugin marketplace add signatureapi/skills
+  /plugin install signatureapi
+  ```
+
+  Working directly in this repo also picks up the MCP server via the checked-in root
+  `.mcp.json` — the same file the plugin installs elsewhere.
 
 ## Skills
 
