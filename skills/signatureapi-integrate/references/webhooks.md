@@ -2,7 +2,7 @@
 
 *Reference for the SignatureAPI signatureapi-integrate skill — test-mode
 integration context, not production guidance on its own. Full workflow:
-skills/signatureapi-integrate/SKILL.md.*
+SKILL.md.*
 
 ## Event types
 

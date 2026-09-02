@@ -2,7 +2,7 @@
 // Part of the SignatureAPI signatureapi-integrate skill. Polls a test-mode
 // envelope's events until it reaches a terminal status, to confirm a
 // ceremony actually completed. Test-mode tooling, not production code.
-// Full workflow: skills/signatureapi-integrate/SKILL.md.
+// Full workflow: SKILL.md.
 import { ok, fail, gap, requireTestKey } from "./lib/output.mjs";
 
 const API = process.env.SIGNATUREAPI_BASE_URL ?? "https://api.signatureapi.com/v1";
@@ -21,7 +21,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   const envelopeId = arg("envelope");
   if (!envelopeId) {
     fail("MISSING_ENVELOPE_ID", "Pass --envelope <id>.", [
-      "node watch-events.mjs --envelope env_...",
+      "node scripts/watch-events.mjs --envelope env_...",
     ]);
   }
   const timeoutMs = Number(arg("timeout", "300")) * 1000;
@@ -31,7 +31,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   while (Date.now() - started < timeoutMs) {
     const res = await fetch(`${API}/envelopes/${envelopeId}/events`, { headers: { "X-API-Key": key } });
     if (!res.ok) {
-      fail("EVENTS_FETCH_FAILED", `HTTP ${res.status} reading events.`, ["node check-setup.mjs"]);
+      fail("EVENTS_FETCH_FAILED", `HTTP ${res.status} reading events.`, ["node scripts/check-setup.mjs"]);
     }
     const { data = [] } = await res.json();
     for (const event of data) {

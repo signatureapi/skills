@@ -2,7 +2,7 @@
 // Part of the SignatureAPI signatureapi-integrate skill. Queries the
 // bundled OpenAPI spec (paths, path detail, schema) instead of reading the
 // full docs page. Test-mode tooling, not production code. Full workflow:
-// skills/signatureapi-integrate/SKILL.md.
+// SKILL.md.
 import { ok, fail } from "./lib/output.mjs";
 
 const SPEC_URL = process.env.SIGNATUREAPI_SPEC_URL ?? "https://spec.signatureapi.com/openapi.yaml";
@@ -65,7 +65,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     const op = spec.paths?.[p]?.[method?.toLowerCase()];
     if (!op) {
       fail("OPERATION_NOT_FOUND", `No ${method} ${p} in the spec.`, [
-        "node openapi-explore.mjs paths envelope",
+        "node scripts/openapi-explore.mjs paths envelope",
       ]);
     }
     ok({
@@ -79,7 +79,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   if (mode === "schema") {
     const schema = selectSchema(spec, args[0] ?? "");
     if (!schema) {
-      fail("SCHEMA_NOT_FOUND", `No schema named ${args[0]}.`, ["node openapi-explore.mjs paths"]);
+      fail("SCHEMA_NOT_FOUND", `No schema named ${args[0]}.`, ["node scripts/openapi-explore.mjs paths"]);
     }
     ok({
       name: args[0],
@@ -89,5 +89,5 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     });
   }
 
-  fail("UNKNOWN_MODE", `Unknown mode "${mode}".`, ["node openapi-explore.mjs --help"]);
+  fail("UNKNOWN_MODE", `Unknown mode "${mode}".`, ["node scripts/openapi-explore.mjs --help"]);
 }

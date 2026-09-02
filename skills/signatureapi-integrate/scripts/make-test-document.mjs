@@ -3,7 +3,7 @@
 // uploads a throwaway one-page test PDF with a place marker, so the Build
 // steps have a document URL without improvising an upload flow. Test-mode
 // tooling, not production code. Full workflow:
-// skills/signatureapi-integrate/SKILL.md.
+// SKILL.md.
 import { ok, fail, requireTestKey } from "./lib/output.mjs";
 
 const API = process.env.SIGNATUREAPI_BASE_URL ?? "https://api.signatureapi.com/v1";
@@ -42,12 +42,12 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   if (!res.ok) {
     fail("UPLOAD_FAILED", `HTTP ${res.status}: ${payload?.detail ?? "upload rejected"}`, [
       "Send raw PDF bytes as the body with Content-Type: application/pdf — not multipart, not JSON",
-      "node check-setup.mjs",
+      "node scripts/check-setup.mjs",
     ]);
   }
   ok({
     document_url: payload.url,
     expires: "24 hours (temporary upload)",
-    next: [`node create-test-envelope.mjs --document-url ${payload.url}`],
+    next: [`node scripts/create-test-envelope.mjs --document-url ${payload.url}`],
   });
 }

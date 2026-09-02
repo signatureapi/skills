@@ -2,7 +2,7 @@
 // Part of the SignatureAPI signatureapi-integrate skill. Prints (--dry-run)
 // or creates a minimum viable test-mode envelope, for adapting into your
 // own create_envelope call. Test-mode tooling, not production code. Full
-// workflow: skills/signatureapi-integrate/SKILL.md.
+// workflow: SKILL.md.
 import { ok, fail, requireTestKey } from "./lib/output.mjs";
 
 const API = process.env.SIGNATUREAPI_BASE_URL ?? "https://api.signatureapi.com/v1";
@@ -49,13 +49,13 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   if (!documentUrl) {
     fail("MISSING_DOCUMENT_URL", "A publicly reachable PDF URL is required.", [
       "Call the MCP tool mint_upload_url to upload a local PDF and get a URL",
-      "node create-test-envelope.mjs --document-url https://example.com/agreement.pdf",
+      "node scripts/create-test-envelope.mjs --document-url https://example.com/agreement.pdf",
     ]);
   }
   const auth = arg("auth", "custom");
   if (auth !== "custom" && auth !== "email_code" && auth !== "email_link") {
     fail("INVALID_AUTH", `--auth must be "custom", "email_code", or "email_link", got "${auth}".`, [
-      "node create-test-envelope.mjs --document-url <url> --auth email_link",
+      "node scripts/create-test-envelope.mjs --document-url <url> --auth email_link",
     ]);
   }
   const body = buildEnvelope({
@@ -79,13 +79,13 @@ if (import.meta.url === `file://${process.argv[1]}`) {
 
   if (res.status === 422) {
     fail("ENVELOPE_VALIDATION_FAILED", payload?.detail ?? "The envelope body was rejected.", [
-      "node openapi-explore.mjs schema Envelope",
+      "node scripts/openapi-explore.mjs schema Envelope",
       "Check that every place's recipient_key matches a recipient key",
     ]);
   }
   if (!res.ok) {
     fail("ENVELOPE_CREATE_FAILED", `HTTP ${res.status}: ${payload?.detail ?? "unknown error"}`, [
-      "node check-setup.mjs",
+      "node scripts/check-setup.mjs",
     ]);
   }
 
@@ -96,11 +96,11 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     status: payload.status,
     ceremony_url: ceremonyUrl,
     next: ceremonyUrl
-      ? [`node watch-events.mjs --envelope ${payload.id}`]
+      ? [`node scripts/watch-events.mjs --envelope ${payload.id}`]
       : [
           "ceremony_url is null (expected for --auth email_link) — read it from the email instead:",
           "MCP: list_emails with envelope_id to find the request email, then get_email for ceremony_url",
-          `node watch-events.mjs --envelope ${payload.id}`,
+          `node scripts/watch-events.mjs --envelope ${payload.id}`,
         ],
   });
 }

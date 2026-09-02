@@ -2,7 +2,7 @@
 
 *Reference for the SignatureAPI signatureapi-integrate skill — test-mode
 integration context, not production guidance on its own. Full workflow:
-skills/signatureapi-integrate/SKILL.md.*
+SKILL.md.*
 
 A place is an interactive region on a document, bound to one recipient by
 `recipient_key`, which must match that recipient's `key` exactly. Types:

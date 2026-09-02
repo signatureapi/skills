@@ -3,7 +3,7 @@
 // envelope and its events in one pass and prints a verdict with next
 // steps. Read-only diagnostic tooling (works against either a test or a
 // live key, GET requests only), not production code. Full runbook:
-// skills/signatureapi-diagnose/SKILL.md.
+// SKILL.md.
 import { ok, fail, resolveKey } from "./lib/output.mjs";
 
 const API = process.env.SIGNATUREAPI_BASE_URL ?? "https://api.signatureapi.com/v1";
@@ -76,7 +76,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   // inside this guarded, GET-only path, rather than in improvised curl.
   const { key, mode } = resolveKey(process.env.SIGNATUREAPI_KEY);
   const id = arg("envelope");
-  if (!id) fail("MISSING_ENVELOPE_ID", "Pass --envelope <id>.", ["node diagnose-envelope.mjs --envelope env_..."]);
+  if (!id) fail("MISSING_ENVELOPE_ID", "Pass --envelope <id>.", ["node scripts/diagnose-envelope.mjs --envelope env_..."]);
 
   const headers = { "X-API-Key": key };
   const [envelope, eventsRes] = await Promise.all([

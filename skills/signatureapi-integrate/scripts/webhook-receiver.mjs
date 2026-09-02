@@ -4,8 +4,8 @@
 // development — it prints each arriving event and nothing else. It is NOT
 // a general-purpose webhook receiver: it does not verify webhook
 // signatures, and it is not production code. Full workflow:
-// skills/signatureapi-integrate/SKILL.md and
-// skills/signatureapi-integrate/references/webhooks.md.
+// SKILL.md and
+// references/webhooks.md.
 import { createServer } from "node:http";
 
 function arg(argv, name, fallback) {
