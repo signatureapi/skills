@@ -13,15 +13,15 @@ const key = requireTestKey(process.env.SIGNATUREAPI_KEY, process.argv.includes("
 const escapeHatchUrl = arg("url");
 const envelopeId = arg("envelope");
 
-if (escapeHatchUrl && !process.argv.includes("--allow-live")) {
-  fail("URL_REQUIRES_ALLOW_LIVE", "An escape-hatch --url cannot be proven to be a test-mode ceremony. Pass --allow-live alongside --url to confirm you accept that risk, or use --envelope instead so the key itself proves test mode.", [
-    "Prefer: node scripts/complete-ceremony.mjs --envelope <id> --i-consent",
+if (escapeHatchUrl && !envelopeId && !process.argv.includes("--allow-live")) {
+  fail("URL_REQUIRES_ALLOW_LIVE", "A --url given without --envelope cannot be proven to be a test-mode ceremony. Pass --allow-live alongside --url to confirm you accept that risk, or pass --envelope <id> alongside --url so fetching the envelope with your test key proves test mode.", [
+    "Prefer: node scripts/complete-ceremony.mjs --envelope <id> --url <ceremony url> --i-consent",
     "Or re-run with: --url <url> --allow-live --i-consent",
   ]);
 }
 
 if (!escapeHatchUrl && !envelopeId) {
-  fail("MISSING_ENVELOPE_ID", "Pass --envelope <id> (preferred) or --url <ceremony url> --allow-live.", [
+  fail("MISSING_ENVELOPE_ID", "Pass --envelope <id> (preferred), --envelope <id> --url <ceremony url>, or --url <ceremony url> --allow-live.", [
     "node scripts/complete-ceremony.mjs --envelope <id> --i-consent",
   ]);
 }
@@ -35,7 +35,9 @@ if (!process.argv.includes("--i-consent")) {
 
 let url = escapeHatchUrl;
 
-if (!url) {
+if (envelopeId) {
+  // Fetching the envelope with the test key IS the mode gate: test and live
+  // are separate namespaces, so a test key only ever sees a test envelope.
   const recipientKey = arg("recipient");
   const res = await fetch(`${API}/envelopes/${envelopeId}`, { headers: { "X-API-Key": key } });
   if (res.status === 404) {
@@ -45,19 +47,22 @@ if (!url) {
     ]);
   }
   const envelope = await res.json();
-  const recipients = envelope?.recipients ?? [];
-  const candidates = recipientKey
-    ? recipients.filter((r) => r.key === recipientKey)
-    : recipients;
-  const recipient = candidates.find((r) => r?.ceremony?.url);
 
-  if (!recipient) {
-    fail("CEREMONY_URL_NOT_RETURNED", "ceremony.url is null for this recipient. It is always null for email_link authentication, since possession of the emailed link is the recipient's authentication.", [
-      'Create the recipient with "ceremony": {"authentication": [{"type": "email_code"}]} to have ceremony.url returned directly',
-      "Or read the link from the email log: MCP list_emails --envelope <id>, then get_email",
-    ]);
+  if (!url) {
+    const recipients = envelope?.recipients ?? [];
+    const candidates = recipientKey
+      ? recipients.filter((r) => r.key === recipientKey)
+      : recipients;
+    const recipient = candidates.find((r) => r?.ceremony?.url);
+
+    if (!recipient) {
+      fail("CEREMONY_URL_NOT_RETURNED", "ceremony.url is null for this recipient. It is null for email_link authentication (the default) since possession of the emailed link is the recipient's authentication.", [
+        "Read the link from the email log: MCP list_emails --envelope <id>, then get_email",
+        'Or create the recipient with "ceremony": {"authentication": [{"type": "email_code"}]} to have ceremony.url returned directly',
+      ]);
+    }
+    url = recipient.ceremony.url;
   }
-  url = recipient.ceremony.url;
 }
 
 let chromium;
