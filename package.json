@@ -7,7 +7,7 @@
   "type": "module",
   "engines": { "node": ">=22" },
   "scripts": {
-    "test": "node --test test/",
+    "test": "node --test",
     "filemap": "node update-filemap.mjs",
     "sync-lib": "node sync-lib.mjs"
   }
