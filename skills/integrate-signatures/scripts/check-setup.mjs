@@ -1,0 +1,26 @@
+#!/usr/bin/env node
+import { ok, fail, requireTestKey } from "./lib/output.mjs";
+
+const API = process.env.SIGNATUREAPI_BASE_URL ?? "https://api.signatureapi.com/v1";
+const key = requireTestKey(process.env.SIGNATUREAPI_KEY, process.argv.includes("--allow-live"));
+
+const res = await fetch(`${API}/envelopes?limit=1`, { headers: { "X-API-Key": key } });
+
+if (res.status === 401 || res.status === 403) {
+  fail("API_KEY_REJECTED", `The API key was rejected (HTTP ${res.status}).`, [
+    "Check the key at https://dashboard.signatureapi.com/api-keys",
+    "export SIGNATUREAPI_KEY=key_test_...",
+  ]);
+}
+if (!res.ok) {
+  fail("API_UNREACHABLE", `HTTP ${res.status} from ${API}.`, [
+    "curl -sS https://signatureapi.statuspage.io/api/v2/status.json",
+  ]);
+}
+
+ok({
+  mode: key.startsWith("key_test_") ? "test" : "live",
+  api: API,
+  mcp: "https://mcp.signatureapi.com/mcp",
+  note: "MCP tools are called by the agent directly; these scripts are the REST fallback and local tooling.",
+});

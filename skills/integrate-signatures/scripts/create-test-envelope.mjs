@@ -1,0 +1,72 @@
+#!/usr/bin/env node
+import { ok, fail, requireTestKey } from "./lib/output.mjs";
+
+const API = process.env.SIGNATUREAPI_BASE_URL ?? "https://api.signatureapi.com/v1";
+
+export function buildEnvelope({ title, documentUrl, recipientName, recipientEmail }) {
+  return {
+    title,
+    documents: [
+      {
+        format: "pdf",
+        url: documentUrl,
+        places: [{ key: "signer_signature", type: "signature", recipient_key: "signer" }],
+      },
+    ],
+    recipients: [{ type: "signer", key: "signer", name: recipientName, email: recipientEmail }],
+  };
+}
+
+function arg(name, fallback) {
+  const i = process.argv.indexOf(`--${name}`);
+  return i === -1 ? fallback : process.argv[i + 1];
+}
+
+if (import.meta.url === `file://${process.argv[1]}`) {
+  const key = requireTestKey(process.env.SIGNATUREAPI_KEY, process.argv.includes("--allow-live"));
+  const documentUrl = arg("document-url");
+  if (!documentUrl) {
+    fail("MISSING_DOCUMENT_URL", "A publicly reachable PDF URL is required.", [
+      "Call the MCP tool mint_upload_url to upload a local PDF and get a URL",
+      "node create-test-envelope.mjs --document-url https://example.com/agreement.pdf",
+    ]);
+  }
+  const body = buildEnvelope({
+    title: arg("title", "Test agreement"),
+    documentUrl,
+    recipientName: arg("recipient-name", "Test Signer"),
+    recipientEmail: arg("recipient-email", "test-signer@example.com"),
+  });
+
+  if (process.argv.includes("--dry-run")) {
+    ok({ dry_run: true, body });
+  }
+
+  const res = await fetch(`${API}/envelopes`, {
+    method: "POST",
+    headers: { "X-API-Key": key, "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  const payload = await res.json().catch(() => null);
+
+  if (res.status === 422) {
+    fail("ENVELOPE_VALIDATION_FAILED", payload?.detail ?? "The envelope body was rejected.", [
+      "node openapi-explore.mjs schema Envelope",
+      "Check that every place's recipient_key matches a recipient key",
+    ]);
+  }
+  if (!res.ok) {
+    fail("ENVELOPE_CREATE_FAILED", `HTTP ${res.status}: ${payload?.detail ?? "unknown error"}`, [
+      "node check-setup.mjs",
+    ]);
+  }
+
+  ok({
+    envelope_id: payload.id,
+    status: payload.status,
+    next: [
+      `node watch-events.mjs --envelope ${payload.id}`,
+      "MCP: list_emails with envelope_id to find the request email, then get_email for ceremony_url",
+    ],
+  });
+}
