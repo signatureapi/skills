@@ -72,6 +72,10 @@ If MCP is unavailable, the dashboard email log is the fallback:
 email lookup, at `recipients[].ceremony.url` on the create response itself.
 The signer still needs the code, fetched as above.
 
+For an `email_link` envelope, the link obtained this way is for Branch A
+only — hand it to a human. It cannot be fed to `complete-ceremony.mjs`; see
+Branch B below for why.
+
 ## Branch A — hand it to the human
 
 Give the `ceremony_url` to the user and wait for them to complete the ceremony
@@ -81,6 +85,12 @@ Use this branch whenever a human is available to sign. It needs no browser
 automation.
 
 ## Branch B — walk it yourself
+
+**Prerequisite:** Playwright is not one of this skill's dependencies (it's
+heavy, and only this branch needs it) — install it before starting this walk,
+not after hitting `PLAYWRIGHT_MISSING` at the last step:
+
+    npm install --save-dev playwright && npx playwright install chromium
 
 The browser walk completes envelopes whose places are signature places —
 which is what `create-test-envelope.mjs` produces, and the only shape this
@@ -123,21 +133,33 @@ the first recipient with a non-null one, or the one named by `--recipient
 <key>`). This is why the loop defaults to `custom`: the script cannot call
 MCP, so `email_link`'s null URL is a dead end here, not just an extra step.
 If every ceremony URL is `null`, it fails with `CEREMONY_URL_NOT_RETURNED` —
-switch that recipient's authentication to `custom` or `email_code`, or fall
-back to the email log as in Branch A.
+switch that recipient's authentication to `custom` or `email_code`, or use
+Branch A instead.
+
+This branch verifies envelopes whose `ceremony.url` the API actually
+returns. `email_link` authentication returns `null` for every recipient's
+`ceremony.url` by design — a live ceremony URL is driven by a browser, where
+your API key plays no part, so an agent that obtained one anyway (say, via
+`list_emails` → `get_email`) must not feed it to this script: the script has
+no API that maps a ceremony back to an envelope, so it cannot prove an
+arbitrary URL belongs to a test-mode envelope, and completing an unverified
+ceremony URL could sign something real. **For an `email_link` envelope, use
+Branch A instead** — hand the link to a human. That works for every
+authentication method.
 
 It then drives a real Chromium browser through the ceremony — genuine pointer
 movement to arm completion, then the primary signing action, with a consent
-modal handled as a fallback if organic input wasn't detected. Requires
-Playwright to be installed in the project (`npm install --save-dev playwright
-&& npx playwright install chromium`); the script reports `PLAYWRIGHT_MISSING`
-with that install command if it isn't.
+modal handled as a fallback if organic input wasn't detected. If Playwright
+(see Prerequisite above) isn't installed, the script reports
+`PLAYWRIGHT_MISSING` with the install command as a safety net — install it
+up front instead of relying on that.
 
-If you already have both the envelope id and the URL (for example, resolved
-via `list_emails` → `get_email` under `email_link`), pass both:
-`--envelope <id> --url <url>`. The envelope fetch proves test mode and that
-the supplied URL belongs to one of its ceremonies, and the browser walk uses
-the URL you supplied without re-deriving it from the envelope response.
+`--url` is an escape hatch for a `custom`-auth envelope whose ceremony URL you
+already resolved some other way — pass it alongside `--envelope <id>`, never
+alone. The envelope fetch proves test mode and that the supplied URL belongs
+to one of its ceremonies (`EMAIL_LINK_URL_UNVERIFIABLE` if the envelope
+returns no ceremony URLs at all — see above), and the browser walk uses the
+URL you supplied without re-deriving it from the envelope response.
 
 `--url` alone, with no `--envelope`, is refused outright: an unverified URL
 cannot be proven to belong to a test-mode ceremony, and there is no flag to

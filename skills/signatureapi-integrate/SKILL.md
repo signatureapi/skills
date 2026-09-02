@@ -27,7 +27,8 @@ inputs:
 **MCP first.** The SignatureAPI MCP server at `https://mcp.signatureapi.com/mcp`
 is the primary interface: `create_envelope`, `get_envelope`, `list_envelopes`,
 `cancel_envelope`, `delete_envelope`, `mint_upload_url`, `list_emails`,
-`get_email`, `search_documentation`.
+`get_email`, `search_documentation`. `get_envelope` takes `envelope_id`, not
+`id`.
 
 When MCP cannot do something, fall back — REST first, dashboard second — and
 report the gap: print a block naming the operation and the fallback used, and
@@ -106,15 +107,19 @@ returns `recipients[].ceremony.url` immediately, with no outstanding
 challenge, so neither branch needs an email lookup. `email_link` (the API's
 own default and what production envelopes typically use) still returns
 `ceremony.url` as `null` — reach that link via `list_emails` → `get_email`
-instead. Full detail, including why `custom` must not be reused for a
+instead, but that link is for Branch A only; Branch B verifies envelopes
+whose ceremony URL the API itself returns, which means a `custom`-auth
+envelope. Full detail, including why `custom` must not be reused for a
 production recipient: `references/verification-loop.md`.
 
 **Branch A (default).** Hand the link to the user and wait for them to
-complete it. This works for every place type.
+complete it. This works for every place type and every authentication
+method, including `email_link`.
 
-**Branch B.** If the user asks you to complete the ceremony yourself:
+**Branch B.** If the user asks you to complete the ceremony yourself (needs
+Playwright — see Scripts table below):
 
-    node scripts/complete-ceremony.mjs --envelope <envelope id> --url <ceremony url>
+    node scripts/complete-ceremony.mjs --envelope <envelope id>
 
 The browser walk completes envelopes whose places are signature places —
 what `create-test-envelope.mjs` produces. For an envelope containing
@@ -142,12 +147,17 @@ Full detail on both branches: `references/verification-loop.md`.
 | `scripts/openapi-explore.mjs` | Query the spec: `paths`, `path <method> <path>`, `schema <name>` |
 | `scripts/make-test-document.mjs` | Build and upload a throwaway test PDF |
 | `scripts/create-test-envelope.mjs` | Print or create a minimum viable test envelope (`--auth custom\|email_link\|email_code`, default `custom`) |
-| `scripts/watch-events.mjs` | Poll events until the envelope reaches a terminal status |
+| `scripts/watch-events.mjs` | Poll events until the envelope reaches a terminal status (`--once` for a single check, no polling) |
 | `scripts/webhook-receiver.mjs` | Local receiver that prints arriving events |
 | `scripts/complete-ceremony.mjs` | Branch B browser walk (test mode only, no bypass) |
 
 Every script prints JSON. Failures are `{"ok": false, "code", "message", "next": [...]}` —
 `next` is the list of commands to run.
+
+Branch B needs Playwright, which is deliberately not one of this skill's own
+dependencies (it's heavy, and only Branch B needs it) — install it before
+starting that walk: `npm install --save-dev playwright && npx playwright
+install chromium`.
 
 ## References
 

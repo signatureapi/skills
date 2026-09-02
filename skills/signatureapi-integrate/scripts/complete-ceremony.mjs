@@ -87,9 +87,10 @@ export function checkSuppliedUrlAgainstEnvelope(envelope, suppliedUrl, recipient
     return {
       ok: false,
       code: "EMAIL_LINK_URL_UNVERIFIABLE",
-      message: "This envelope returns no ceremony.url on any recipient (email_link authentication does this by design), so the supplied --url cannot be checked against it — there is nothing to match it to.",
+      message: "This envelope returns no ceremony.url on any recipient (email_link authentication does this by design), so the supplied --url cannot be checked against it — there is nothing to match it to. This script cannot prove an arbitrary URL belongs to a test-mode envelope, and completing an unverified ceremony URL could sign something real.",
       next: [
-        "Create the verification envelope with create-test-envelope.mjs's default custom authentication instead — its ceremony.url comes back on the envelope and can be verified",
+        "Verify with a custom-auth envelope instead: create-test-envelope.mjs's default custom authentication returns ceremony.url on the envelope itself, so it can be checked",
+        "Or use Branch A for this envelope: hand its ceremony link to a human to complete",
       ],
     };
   }
