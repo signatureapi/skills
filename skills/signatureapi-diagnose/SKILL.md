@@ -12,6 +12,20 @@ inputs:
 Start here: `node scripts/diagnose-envelope.mjs --envelope <id>` — it fetches the
 envelope and its events in one pass and prints a verdict with next steps.
 
+## When to reach for something else
+
+- **Building a new signing flow** — creating envelopes, placing signature
+  fields, wiring up a webhook for the first time — belongs to
+  `signatureapi-integrate`.
+- **A webhook that is not a SignatureAPI webhook** belongs to whatever sent
+  it; the symptoms and event shapes below are specific to SignatureAPI.
+- **A different e-signature vendor** (DocuSign, Dropbox Sign, Adobe Sign,
+  etc.) needs that vendor's own docs — see the retrieval-over-memory note
+  above; the failure codes and symptoms here are SignatureAPI-specific.
+- **A project with no SignatureAPI credentials present** has no envelope to
+  diagnose yet — confirm that first rather than running this skill's
+  scripts against a key that doesn't exist.
+
 ## Access
 
 MCP first (`https://mcp.signatureapi.com/mcp`): `get_envelope`, `list_envelopes`,

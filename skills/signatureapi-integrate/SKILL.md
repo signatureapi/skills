@@ -8,7 +8,19 @@ inputs:
 
 # Integrate SignatureAPI
 
-For diagnosing an integration that already exists, use `signatureapi-diagnose` instead.
+## When to reach for something else
+
+- **Diagnosing an integration that already exists** — a stuck envelope, a
+  missing webhook, a failed ceremony — belongs to `signatureapi-diagnose`.
+- **A webhook that is not a SignatureAPI webhook** belongs to whatever sent
+  it; this skill's webhook guidance is specific to SignatureAPI's event
+  shapes and signing secret.
+- **A different e-signature vendor** (DocuSign, Dropbox Sign, Adobe Sign,
+  etc.) needs that vendor's own docs — see the retrieval-over-memory note
+  above; this skill's schema and semantics are SignatureAPI-specific.
+- **A project with no SignatureAPI credentials present** has not yet
+  decided to integrate SignatureAPI — confirm that first rather than
+  running `check-setup.mjs` against a key that doesn't exist.
 
 ## Access
 
