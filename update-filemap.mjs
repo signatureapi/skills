@@ -17,16 +17,11 @@ export function buildFilemap(entries) {
 // Hand-maintained fallback for scripts with no leading file-level comment to
 // pull a description from. Keyed by path suffix (matched with endsWith), so
 // one entry covers a script shared verbatim across skills (e.g. lib/output.mjs).
-// Keep in sync when a script is added, renamed, or gains/loses a leading comment.
+// Every top-level script now carries its own leading header comment (SIG-1222),
+// so this only needs to cover files that intentionally have none, like the
+// shared lib. Keep in sync when a script is added, renamed, or gains/loses a
+// leading comment.
 const FALLBACK_DESCRIPTIONS = {
-  "scripts/check-setup.mjs": "Checks credentials, mode, and API reachability",
-  "scripts/create-test-envelope.mjs": "Prints or creates a minimum viable test envelope",
-  "scripts/make-test-document.mjs": "Builds and uploads a throwaway test PDF",
-  "scripts/openapi-explore.mjs": "Queries the bundled OpenAPI spec: paths, path detail, schema",
-  "scripts/watch-events.mjs": "Polls envelope events until a terminal status",
-  "scripts/webhook-receiver.mjs": "Local HTTP receiver that prints arriving webhook events",
-  "scripts/diagnose-envelope.mjs": "Diagnoses why an envelope is stuck or missing a deliverable",
-  "scripts/complete-ceremony.mjs": "Branch B: drives a real browser through a ceremony (test mode only, no bypass)",
   "scripts/lib/output.mjs": "Shared ok/fail/gap JSON output helpers for every script",
 };
 

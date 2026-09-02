@@ -1,4 +1,8 @@
 #!/usr/bin/env node
+// Part of the SignatureAPI signatureapi-integrate skill. Polls a test-mode
+// envelope's events until it reaches a terminal status, to confirm a
+// ceremony actually completed. Test-mode tooling, not production code.
+// Full workflow: skills/signatureapi-integrate/SKILL.md.
 import { ok, fail, gap, requireTestKey } from "./lib/output.mjs";
 
 const API = process.env.SIGNATUREAPI_BASE_URL ?? "https://api.signatureapi.com/v1";

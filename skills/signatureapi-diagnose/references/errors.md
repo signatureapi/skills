@@ -1,5 +1,9 @@
 # HTTP errors
 
+*Reference for the SignatureAPI signatureapi-diagnose skill — diagnostic
+context, not production guidance on its own. Full runbook:
+skills/signatureapi-diagnose/SKILL.md.*
+
 Error responses use RFC 7807 problem details:
 
 ```json

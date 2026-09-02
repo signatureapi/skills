@@ -1,5 +1,9 @@
 # Verifying a ceremony actually happened
 
+*Reference for the SignatureAPI signatureapi-integrate skill — test-mode
+integration context, not production guidance on its own. Full workflow:
+skills/signatureapi-integrate/SKILL.md.*
+
 Creating an envelope does not prove a recipient can sign it. Two branches close
 that loop — both start the same way and only diverge at the point where a human
 would normally click the link.

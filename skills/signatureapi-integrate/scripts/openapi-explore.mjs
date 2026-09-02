@@ -1,4 +1,8 @@
 #!/usr/bin/env node
+// Part of the SignatureAPI signatureapi-integrate skill. Queries the
+// bundled OpenAPI spec (paths, path detail, schema) instead of reading the
+// full docs page. Test-mode tooling, not production code. Full workflow:
+// skills/signatureapi-integrate/SKILL.md.
 import { ok, fail } from "./lib/output.mjs";
 
 const SPEC_URL = process.env.SIGNATUREAPI_SPEC_URL ?? "https://spec.signatureapi.com/openapi.yaml";

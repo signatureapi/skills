@@ -1,4 +1,10 @@
 #!/usr/bin/env node
+// Part of the SignatureAPI signatureapi-integrate skill. Branch B of the
+// verification loop: drives a real Chromium browser through a test-mode
+// signing ceremony, then verifies completion against the API rather than
+// trusting the browser walk finishing without error. Test-mode tooling,
+// not production code, and cannot be pointed at a live key — see
+// skills/signatureapi-integrate/SKILL.md for the full workflow.
 import { ok, fail, requireTestKey } from "./lib/output.mjs";
 
 const API = process.env.SIGNATUREAPI_BASE_URL ?? "https://api.signatureapi.com/v1";

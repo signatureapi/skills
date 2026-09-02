@@ -1,4 +1,9 @@
 #!/usr/bin/env node
+// Part of the SignatureAPI signatureapi-integrate skill. Builds and
+// uploads a throwaway one-page test PDF with a place marker, so the Build
+// steps have a document URL without improvising an upload flow. Test-mode
+// tooling, not production code. Full workflow:
+// skills/signatureapi-integrate/SKILL.md.
 import { ok, fail, requireTestKey } from "./lib/output.mjs";
 
 const API = process.env.SIGNATUREAPI_BASE_URL ?? "https://api.signatureapi.com/v1";

@@ -1,4 +1,11 @@
 #!/usr/bin/env node
+// Part of the SignatureAPI signatureapi-integrate skill. A local HTTP
+// listener to point a test-mode SignatureAPI webhook endpoint at during
+// development — it prints each arriving event and nothing else. It is NOT
+// a general-purpose webhook receiver: it does not verify webhook
+// signatures, and it is not production code. Full workflow:
+// skills/signatureapi-integrate/SKILL.md and
+// skills/signatureapi-integrate/references/webhooks.md.
 import { createServer } from "node:http";
 
 function arg(argv, name, fallback) {

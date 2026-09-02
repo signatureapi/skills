@@ -1,4 +1,8 @@
 #!/usr/bin/env node
+// Part of the SignatureAPI signatureapi-integrate skill. Prints (--dry-run)
+// or creates a minimum viable test-mode envelope, for adapting into your
+// own create_envelope call. Test-mode tooling, not production code. Full
+// workflow: skills/signatureapi-integrate/SKILL.md.
 import { ok, fail, requireTestKey } from "./lib/output.mjs";
 
 const API = process.env.SIGNATUREAPI_BASE_URL ?? "https://api.signatureapi.com/v1";

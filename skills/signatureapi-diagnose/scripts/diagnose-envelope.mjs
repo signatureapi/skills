@@ -1,4 +1,9 @@
 #!/usr/bin/env node
+// Part of the SignatureAPI signatureapi-diagnose skill. Fetches an
+// envelope and its events in one pass and prints a verdict with next
+// steps. Read-only diagnostic tooling (works against either a test or a
+// live key, GET requests only), not production code. Full runbook:
+// skills/signatureapi-diagnose/SKILL.md.
 import { ok, fail, resolveKey } from "./lib/output.mjs";
 
 const API = process.env.SIGNATUREAPI_BASE_URL ?? "https://api.signatureapi.com/v1";

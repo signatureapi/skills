@@ -1,5 +1,9 @@
 # Webhooks
 
+*Reference for the SignatureAPI signatureapi-integrate skill — test-mode
+integration context, not production guidance on its own. Full workflow:
+skills/signatureapi-integrate/SKILL.md.*
+
 ## Event types
 
 `envelope.created`, `envelope.started`, `envelope.completed`,
