@@ -4,6 +4,10 @@
 integration context, not production guidance on its own. Full workflow:
 SKILL.md.*
 
+In a greenfield project — nothing here yet to place signing into — skip
+ahead to Build in SKILL.md; these questions only apply once there's an
+existing codebase to fit into.
+
 Answer these before writing code:
 
 1. Where do documents already live? Grep for PDF generation, file uploads,

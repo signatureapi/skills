@@ -48,6 +48,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   ok({
     document_url: payload.url,
     expires: "24 hours (temporary upload)",
+    note: "The upload URL's host is always api.signatureapi.com, even when SIGNATUREAPI_BASE_URL points elsewhere (e.g. staging) — that's server behavior (uploads live on one shared host regardless of environment), not a bug. Use the URL as returned.",
     next: [`node scripts/create-test-envelope.mjs --document-url ${payload.url}`],
   });
 }

@@ -28,8 +28,9 @@ envelope and its events in one pass and prints a verdict with next steps.
 
 ## Access
 
-MCP first (`https://mcp.signatureapi.com/mcp`): `get_envelope`, `list_envelopes`,
-`list_emails`, `get_email`, `search_documentation`. REST fallback at
+MCP first (`https://mcp.signatureapi.com/mcp`): `get_envelope` (takes
+`envelope_id`, not `id`), `list_envelopes`, `list_emails`, `get_email`,
+`search_documentation`. REST fallback at
 `https://api.signatureapi.com/v1` with the `X-API-Key` header. When you have to
 fall back, report the gap at https://github.com/signatureapi/skills/issues/new.
 
