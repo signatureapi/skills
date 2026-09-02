@@ -502,7 +502,8 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   const consentModalProbe = await probeContainer(consentModal, 8000);
   if (consentModalProbe.outcome === "ambiguous") {
     await browser.close();
-    fail("CEREMONY_CONTAINER_AMBIGUOUS", `While checking for the disclosure/consent modal, the container selector matched more than one element (or errored) instead of exactly one: ${consentModalProbe.detail}. Refusing to guess which one is the real modal — an ambiguous match is not the same as "not on this page".`, [
+    fail("CEREMONY_CONTAINER_AMBIGUOUS", `While checking for the disclosure/consent modal, the container selector matched more than one element (or errored) instead of exactly one: ${consentModalProbe.detail}. Refusing to guess which one is the real modal — an ambiguous match is not the same as "not on this page". Likely cause: this envelope has an initials place (or another place type) alongside or instead of a signature place — the signer UI shares contract attributes between the signature and initials modals, and this walk only ever completes envelopes whose places are signature places.`, [
+      "Hand the ceremony link to a human instead (Branch A in references/verification-loop.md) — it works for every place type",
       "Re-run with PWDEBUG=1 to watch the browser",
       'The disclosure-modal contract value may now also be matching something it should not — inspect the page and narrow the selector',
     ]);
@@ -558,7 +559,8 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   const adoptionModalProbe = await probeContainer(adoptionModal, 15000);
   if (adoptionModalProbe.outcome === "ambiguous") {
     await browser.close();
-    fail("CEREMONY_CONTAINER_AMBIGUOUS", `While waiting for the signature adoption modal, the container selector matched more than one element (or errored) instead of exactly one: ${adoptionModalProbe.detail}. Refusing to guess which one is the real modal.`, [
+    fail("CEREMONY_CONTAINER_AMBIGUOUS", `While waiting for the signature adoption modal, the container selector matched more than one element (or errored) instead of exactly one: ${adoptionModalProbe.detail}. Refusing to guess which one is the real modal. Likely cause: this envelope has an initials place (or another place type) alongside or instead of a signature place — the signer UI shares contract attributes between the signature and initials modals, and this walk only ever completes envelopes whose places are signature places.`, [
+      "Hand the ceremony link to a human instead (Branch A in references/verification-loop.md) — it works for every place type",
       "Re-run with PWDEBUG=1 to watch the browser",
       "The adopt-modal contract value may now also be matching something it should not — inspect the page and narrow the selector",
     ]);

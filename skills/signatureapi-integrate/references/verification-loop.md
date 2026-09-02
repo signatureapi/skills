@@ -82,6 +82,23 @@ automation.
 
 ## Branch B — walk it yourself
 
+The browser walk completes envelopes whose places are signature places —
+which is what `create-test-envelope.mjs` produces, and the only shape this
+branch has ever been driven against. Hand the link to a human (Branch A) for
+an envelope containing `initials` or any other place type; that branch works
+for every place type because a human, not a selector, is reading the page.
+
+The reason is a contract collision, not a missing feature: the signer UI's
+`signature-input` and `adopt` attributes are shared between the signature
+modal and the initials modal. On an envelope that has both, or an initials
+place instead of a signature place, the walker's container selectors can
+match more than one element. Under this script's fail-closed rule (see the
+file header), that surfaces as `CEREMONY_CONTAINER_AMBIGUOUS` rather than a
+silent wrong click — correct behavior, but the walk still cannot complete
+that ceremony. Widening the walker to disambiguate other place types needs
+new contract attributes in the signer UI and its own test coverage; it isn't
+something to route around here.
+
 When no human is available, or the user has asked you to complete the
 ceremony directly:
 

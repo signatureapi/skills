@@ -110,13 +110,17 @@ instead. Full detail, including why `custom` must not be reused for a
 production recipient: `references/verification-loop.md`.
 
 **Branch A (default).** Hand the link to the user and wait for them to
-complete it.
+complete it. This works for every place type.
 
 **Branch B.** If the user asks you to complete the ceremony yourself:
 
     node scripts/complete-ceremony.mjs --envelope <envelope id> --url <ceremony url>
 
-No flag gates this branch, and none should be added: an agent runs
+The browser walk completes envelopes whose places are signature places —
+what `create-test-envelope.mjs` produces. For an envelope containing
+`initials` or any other place type, use Branch A instead; see
+`references/verification-loop.md` for why. No flag gates this branch, and
+none should be added: an agent runs
 non-interactively, so any check a flag could enforce is one the agent could
 already satisfy on its own initiative just by passing it — a flag shaped
 like a consent gate would invite the belief that something is being
