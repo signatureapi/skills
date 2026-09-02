@@ -1,0 +1,18 @@
+{
+  "name": "signatureapi",
+  "owner": {
+    "name": "SignatureAPI",
+    "url": "https://signatureapi.com"
+  },
+  "plugins": [
+    {
+      "name": "signatureapi",
+      "source": "./",
+      "description": "SignatureAPI e-signature skills, kept in sync with the hosted MCP server configuration so the same install delivers both.",
+      "keywords": [
+        "signatureapi-diagnose",
+        "signatureapi-integrate"
+      ]
+    }
+  ]
+}

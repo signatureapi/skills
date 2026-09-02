@@ -1,0 +1,6 @@
+{
+  "signatureapi": {
+    "type": "http",
+    "url": "https://mcp.signatureapi.com/mcp"
+  }
+}

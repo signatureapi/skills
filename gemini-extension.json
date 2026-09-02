@@ -1,0 +1,12 @@
+{
+  "name": "signatureapi",
+  "version": "1.0.0",
+  "mcpServers": {
+    "signatureapi": {
+      "httpUrl": "https://mcp.signatureapi.com/mcp",
+      "oauth": {
+        "enabled": true
+      }
+    }
+  }
+}

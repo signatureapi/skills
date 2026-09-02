@@ -7,33 +7,43 @@ line: one for building a signing flow, one for diagnosing one that already exist
 ## Install
 
 There are two install paths. They share the same skill content but are not equivalent — pick
-based on whether you also want the hosted MCP server configured.
+based on whether you also want the hosted MCP server (`https://mcp.signatureapi.com/mcp`,
+OAuth-authenticated) configured.
 
-**Cross-runtime** (Claude Code, Codex, Cursor, Copilot) — installs the two skills only, no MCP
-configuration:
+**Cross-runtime** (Claude Code, Codex, Cursor, Copilot, Amp, Antigravity, and others) — installs
+the two skills only, no MCP configuration:
 
 ```bash
 npx skills add signatureapi/skills
 ```
 
-**Claude Code plugin** — installs the same two skills *and* configures the hosted SignatureAPI
-MCP server (`https://mcp.signatureapi.com/mcp`) in one step:
+**Plugin install** — installs the same two skills *and* configures the hosted MCP server in one
+step. Every ecosystem below installs from this same repo root — nothing is mirrored per
+ecosystem, so the plugin path and the `npx skills` path always carry identical skill content:
 
-```
-/plugin marketplace add signatureapi/skills
-/plugin install signatureapi@signatureapi
-```
+| Ecosystem | Install |
+|---|---|
+| Claude Code | `/plugin marketplace add signatureapi/skills` then `/plugin install signatureapi@signatureapi` |
+| Cursor | Add marketplace `signatureapi/skills`, then install the `signatureapi` plugin (see [Cursor's plugin docs](https://cursor.com/docs/plugins)) |
+| Codex | `codex plugin marketplace add signatureapi/skills` then `codex plugin install signatureapi` |
+| Grok Build | Add marketplace `signatureapi/skills` via `/marketplace`, then install the `signatureapi` plugin |
+| Gemini CLI | `gemini extensions install https://github.com/signatureapi/skills` |
+| Any agent-plugins.org-compatible client | Point it at this repo root — `plugin.json` and `mcp.json` follow the [agent-plugins.org 1.0.0 schema](https://agent-plugins.org/specification) |
 
-The plugin install raises no authentication prompt. The MCP server is configured but
+Claude Code's plugin install raises no authentication prompt — the MCP server is configured but
 unauthenticated until you first use it, at which point Claude Code reports `! Needs
-authentication` and `claude mcp login` walks you through OAuth.
+authentication` and `claude mcp login` walks you through OAuth. Where the ecosystem lets us say
+so upfront instead, we do: Codex's manifest sets `policy.authentication: "ON_INSTALL"` and
+Gemini's sets `oauth.enabled: true`, so those two prompt for auth at install time rather than
+deferring silently to first use.
 
-The plugin is all-or-nothing: skills and MCP server install and uninstall together. There's no
-flag to take one without the other, and `claude mcp remove` refuses to remove a plugin-owned
-server. If you want the skills without the MCP server, use the `npx skills` path instead.
+Each plugin install is all-or-nothing: skills and MCP server install and uninstall together.
+There's no flag to take one without the other, and (for Claude Code) `claude mcp remove` refuses
+to remove a plugin-owned server. If you want the skills without the MCP server, use the
+`npx skills` path instead.
 
 Working directly in this repo also picks up the MCP server via the checked-in root `.mcp.json` —
-the same file the plugin installs elsewhere.
+the same file the Claude Code and Grok Build plugins install elsewhere.
 
 ## Skills
 
@@ -78,9 +88,12 @@ browser through a ceremony, and pulling a verdict for a stuck envelope.
 Issues and pull requests are welcome: https://github.com/signatureapi/skills
 
 After changing a skill's `SKILL.md` frontmatter (name, description) or the
-package version, run `npm run manifests` and commit the regenerated
-`.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json`, and
-`agent-skills.json` in the same change — `npm test` fails otherwise. The
+package version, run `npm run manifests` and commit every regenerated manifest in the same
+change — `npm test` fails otherwise. That's every per-ecosystem plugin/marketplace manifest
+(`.claude-plugin/`, `.cursor-plugin/`, `.codex-plugin/`, `.agents/plugins/`, `.grok-plugin/`,
+`gemini-extension.json`, root `plugin.json`/`mcp.json`), the root `.mcp.json`, and
+`agent-skills.json` — all derived from `skills/*/SKILL.md` frontmatter and the `MCP_URL`
+constant in `generate-manifests.mjs`, never hand-edited. The
 `agent-skills.json` payload is also served from elsewhere (the
 `https://signatureapi.com/.well-known/agent-skills` discovery endpoint), so
 that redeploy has to happen together with the commit, not sometime after
