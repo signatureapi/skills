@@ -4,6 +4,7 @@ import {
   collectCeremonyUrls,
   extractCeremonyId,
   checkSuppliedUrlAgainstEnvelope,
+  pollForRecipientCompletion,
 } from "../skills/signatureapi-integrate/scripts/complete-ceremony.mjs";
 
 /** A ceremony URL shaped like the real ones: a JWT `token` query param whose
@@ -82,4 +83,66 @@ test("checkSuppliedUrlAgainstEnvelope fails EMAIL_LINK_URL_UNVERIFIABLE when the
 
 test("checkSuppliedUrlAgainstEnvelope has no parameter that can let an unverifiable url through", () => {
   assert.equal(checkSuppliedUrlAgainstEnvelope.length, 3);
+});
+
+// I1: pollForRecipientCompletion used to default to recipients[0] whenever
+// recipientKey was falsy — reachable when the ceremony URL's ceremony_id
+// claim couldn't be parsed — which on a multi-recipient envelope could
+// verify a recipient who was already `completed` before this walk started,
+// reporting `verified: true` for a walk that signed nothing. It must now
+// refuse instead of guessing, without ever calling fetch to do so.
+test("pollForRecipientCompletion refuses with a distinct code when recipientKey could not be resolved, without fetching", async () => {
+  const originalFetch = globalThis.fetch;
+  let fetchCalled = false;
+  globalThis.fetch = async () => {
+    fetchCalled = true;
+    throw new Error("pollForRecipientCompletion should not have called fetch");
+  };
+  try {
+    const result = await pollForRecipientCompletion({
+      api: "https://api.signatureapi.dev/v1",
+      envelopeId: "env_123",
+      recipientKey: null,
+      key: "key_test_abc",
+      timeoutMs: 50,
+    });
+    assert.equal(result.completed, false);
+    assert.equal(result.code, "RECIPIENT_KEY_UNRESOLVED");
+    assert.equal(result.recipient, null);
+    assert.equal(fetchCalled, false);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("pollForRecipientCompletion still resolves a matching, explicitly-keyed recipient", async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () => ({
+    ok: true,
+    json: async () => ({
+      status: "in_progress",
+      recipients: [
+        { key: "a", status: "completed" },
+        { key: "b", status: "in_progress" },
+      ],
+    }),
+  });
+  try {
+    const result = await pollForRecipientCompletion({
+      api: "https://api.signatureapi.dev/v1",
+      envelopeId: "env_123",
+      recipientKey: "b",
+      key: "key_test_abc",
+      timeoutMs: 50,
+      intervalMs: 10,
+    });
+    // Recipient "b" never reaches completed within the short timeout, so
+    // this should time out rather than complete — and crucially it must
+    // check "b", not silently succeed against "a" (recipients[0]), which
+    // is already completed.
+    assert.equal(result.completed, false);
+    assert.notEqual(result.code, "RECIPIENT_KEY_UNRESOLVED");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
 });

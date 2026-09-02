@@ -5,6 +5,18 @@
 // trusting the browser walk finishing without error. Test-mode tooling,
 // not production code, and cannot be pointed at a live key — see
 // SKILL.md for the full workflow.
+//
+// Design rule, applied everywhere in this file: every guard in this script
+// fails closed. If a check cannot be evaluated — a selector that should
+// match one element matches more or errors, a recipient that can't be
+// identified, a control whose label can't be read — it refuses, loudly,
+// rather than treating "I don't know" as "must be fine". This repo has
+// shipped three separate defects that were all the same shape: a failure
+// path that quietly degraded into a reported success (a walker that printed
+// `walked: true` when nothing happened; a decline guard that permitted a
+// click when it couldn't read a label; a swallowed selector error that
+// skipped a whole step while `noteFallbackIfUsed` still reported the
+// contract satisfied). None of that is allowed here anymore.
 import { ok, fail, requireTestKey } from "./lib/output.mjs";
 
 const API = process.env.SIGNATUREAPI_BASE_URL ?? "https://api.signatureapi.com/v1";
@@ -133,8 +145,24 @@ const TERMINAL_NON_COMPLETED_RECIPIENT_STATUSES = ["rejected", "soft_bounced", "
  * finishing without error proves nothing by itself — SIG-1222's found defect
  * was exactly a script that reported success after a walk whose clicks
  * silently no-op'd. This is the check that replaces that false claim.
+ *
+ * `recipientKey` is required — it is never defaulted to `recipients[0]`.
+ * `resolveTargetRecipientKey` returns null whenever the ceremony URL's
+ * `ceremony_id` claim couldn't be parsed, and on a multi-recipient envelope
+ * silently checking recipients[0] in that case can verify a recipient who
+ * was already `completed` before this walk even started — reporting
+ * `verified: true` for a walk that signed nothing. Refusing to guess here is
+ * what closes that gap.
  */
 export async function pollForRecipientCompletion({ api, envelopeId, recipientKey, key, timeoutMs, intervalMs = 3000 }) {
+  if (!recipientKey) {
+    return {
+      completed: false,
+      code: "RECIPIENT_KEY_UNRESOLVED",
+      envelope: null,
+      recipient: null,
+    };
+  }
   const started = Date.now();
   let lastEnvelope = null;
   do {
@@ -142,7 +170,7 @@ export async function pollForRecipientCompletion({ api, envelopeId, recipientKey
     if (res.ok) {
       lastEnvelope = await res.json();
       const recipients = lastEnvelope?.recipients ?? [];
-      const recipient = recipientKey ? recipients.find((r) => r.key === recipientKey) : recipients[0];
+      const recipient = recipients.find((r) => r.key === recipientKey);
       if (recipient?.status === "completed") {
         return { completed: true, envelope: lastEnvelope, recipient };
       }
@@ -302,13 +330,101 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   }
 
   /**
+   * Probes an optional *container* locator (the disclosure/consent modal,
+   * the signature adoption modal) and reports one of three genuinely
+   * different outcomes, instead of collapsing "present" vs. everything else
+   * into a boolean:
+   *
+   *   - "present"   exactly one element matched and became visible — proceed.
+   *   - "absent"    the locator never matched anything (a real timeout with
+   *                 zero matches) — the container legitimately isn't on this
+   *                 page; tolerate it, the caller decides whether that's ok.
+   *   - "ambiguous" the locator matched MORE than one element, or `count()`
+   *                 itself errored, or `waitFor` failed for some reason
+   *                 other than a plain "never appeared" timeout — refuse to
+   *                 guess which element is the real one.
+   *
+   * This is the fix for SIG-1222's C1: `disclosure`/`adopt` used to be both
+   * the checkbox attribute AND (via the private-id fallback) the container
+   * selector, so once the checkboxes (rendered N-up in a `.map()`) also
+   * carried a `data-ceremony-step` attribute, the combined selector matched
+   * N+1 elements. Playwright's strict mode then raised on any action against
+   * it, `.catch(() => false)` swallowed that into "absent", and the whole
+   * step silently no-op'd while still being reported satisfied. Distinct
+   * `-modal` container values (see the call sites below) fix the root
+   * collision; this three-outcome check is the belt-and-suspenders so that
+   * if a selector is EVER ambiguous again — for any reason — it fails loud
+   * instead of disappearing into "absent".
+   */
+  async function probeContainer(locator, timeout) {
+    let waitError = null;
+    try {
+      // Waiting on `.first()` avoids the wait itself throwing a strict-mode
+      // error merely because there happen to be multiple matches — the
+      // multiplicity is judged below, from `count()`, not from whether the
+      // first match became visible.
+      await locator.first().waitFor({ state: "visible", timeout });
+    } catch (e) {
+      waitError = e;
+    }
+    let count;
+    try {
+      count = await locator.count();
+    } catch (e) {
+      return { outcome: "ambiguous", detail: `count() failed: ${e?.message ?? e}` };
+    }
+    if (count > 1) {
+      return { outcome: "ambiguous", detail: `matched ${count} elements` };
+    }
+    if (count === 1 && !waitError) {
+      return { outcome: "present", detail: null };
+    }
+    if (count === 0 && waitError && /Timeout/i.test(waitError.message ?? "")) {
+      return { outcome: "absent", detail: null };
+    }
+    // Any other combination — e.g. exactly one match but `waitFor` failed
+    // for a non-timeout reason, or zero matches with a non-timeout error —
+    // is not a shape this function understands. Refuse to guess.
+    return { outcome: "ambiguous", detail: waitError ? (waitError.message ?? String(waitError)) : `unexpected match count ${count}` };
+  }
+
+  /**
+   * Reads every accessible-name source Playwright can give us for a control
+   * — visible text, `aria-label`, `title` — and joins whatever is non-blank.
+   * Text content alone is blind to a whole class of control: the
+   * ceremony's own signature place is labelled only by `aria-label`
+   * (`button[aria-label="Sign here"]`), so a text-only check would see "" for
+   * it and, under the old catch-and-default-to-"" behavior, let anything
+   * through unchecked. This throws (does not catch) on a read failure —
+   * callers must treat that as a refusal, not fall back to "".
+   */
+  async function readAccessibleLabel(locator) {
+    const [text, ariaLabel, title] = await Promise.all([
+      locator.textContent(),
+      locator.getAttribute("aria-label"),
+      locator.getAttribute("title"),
+    ]);
+    return [text, ariaLabel, title]
+      .filter((s) => typeof s === "string" && s.trim() !== "")
+      .join(" ")
+      .trim();
+  }
+
+  /**
    * Click one specific, named control. Never falls through to a looser
    * match: if the control cannot be found, the walk fails loudly with what
    * WAS on the page instead of guessing at something else that might match.
-   * Also refuses to click anything whose own visible text reads as a
+   * Also refuses to click anything whose accessible label reads as a
    * decline/reject/refuse action — belt-and-suspenders on top of using
    * specific ids/labels instead of a generic "primary action" regex hunt,
    * which is what let SIG-1222's script click "Decline to sign".
+   *
+   * Fails closed on the label check itself: the original version read
+   * `textContent()` and treated a read failure as `""`, which passes the
+   * decline regex and proceeds to click — a check that can't be evaluated
+   * silently became permission. Here, a label that can't be read (any of
+   * text/aria-label/title throws) or that reads as nothing at all across
+   * all three sources is refused, not defaulted through.
    */
   async function clickStep({ step, locator, dataStep, scope, name, timeout = 15000, required = true }) {
     walkLastStep = step;
@@ -325,10 +441,27 @@ if (import.meta.url === `file://${process.argv[1]}`) {
       ]);
     }
     if (dataStep) await noteFallbackIfUsed(scope ?? page, dataStep);
-    const text = ((await locator.textContent().catch(() => "")) || "").trim();
-    if (DECLINE_LIKE.test(text)) {
+
+    let label;
+    try {
+      label = await readAccessibleLabel(locator);
+    } catch (e) {
       await browser.close();
-      fail("CEREMONY_DECLINE_CONTROL_MATCHED", `While ${step}, the "${name}" selector matched a control labeled "${text}", which reads as a decline/reject/refuse action. Refusing to click it — signing scripts must never be able to trigger a decline.`, [
+      fail("CEREMONY_DECLINE_LABEL_UNREADABLE", `While ${step}, could not read "${name}"'s accessible label (text content, aria-label, title) to confirm it isn't a decline/reject/refuse control. Refusing to click blind rather than assuming it's safe: ${e?.message ?? e}`, [
+        "Re-run with PWDEBUG=1 to watch the browser",
+        "The control may have detached or changed between locating it and reading its label",
+      ]);
+    }
+    if (!label) {
+      await browser.close();
+      fail("CEREMONY_DECLINE_LABEL_UNREADABLE", `While ${step}, "${name}" has no readable accessible name (no text content, aria-label, or title matched), so there is nothing to check it against before clicking. Refusing to click blind.`, [
+        "Re-run with PWDEBUG=1 to watch the browser",
+        "The selector may be matching the wrong control, or the control needs a readable label",
+      ]);
+    }
+    if (DECLINE_LIKE.test(label)) {
+      await browser.close();
+      fail("CEREMONY_DECLINE_CONTROL_MATCHED", `While ${step}, the "${name}" selector matched a control whose accessible label reads "${label}", which reads as a decline/reject/refuse action. Refusing to click it — signing scripts must never be able to trigger a decline.`, [
         "Narrow the selector for this step; it is matching the wrong control",
       ]);
     }
@@ -336,8 +469,19 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     return true;
   }
 
-  async function checkAllCheckboxes(scopeLocator) {
-    const boxes = scopeLocator.locator('input[type="checkbox"]');
+  /**
+   * Checks every agreement checkbox within a container. `dataStep` selects
+   * checkboxes by `[data-ceremony-step="<dataStep>"]` (the new contract —
+   * `"disclosure"` or `"adopt"`), falling back to any
+   * `input[type="checkbox"]` in the container for environments that don't
+   * carry the attribute yet. This is a plain OR (`stepLocator`, same as
+   * every other step selector below): once the new attribute is deployed,
+   * the fallback half stops matching anything new — it never causes a
+   * checkbox to be counted twice, since a comma-separated CSS selector list
+   * already de-duplicates elements that match more than one branch.
+   */
+  async function checkAllCheckboxes(scopeLocator, dataStep) {
+    const boxes = stepLocator(scopeLocator, dataStep, 'input[type="checkbox"]');
     const count = await boxes.count();
     for (let i = 0; i < count; i++) {
       const box = boxes.nth(i);
@@ -348,18 +492,25 @@ if (import.meta.url === `file://${process.argv[1]}`) {
 
   // Step 1: disclosure checkbox(es) + "Agree and Continue" — the consent
   // modal. Some ceremonies (already-consented resumes, certain embeds) skip
-  // it, so its absence is tolerated; but once found, "Agree and Continue"
-  // must be there too.
+  // it, so its genuine absence is tolerated; but once found, "Agree and
+  // Continue" must be there too. The container selector is
+  // `disclosure-modal` — deliberately NOT the same value ("disclosure") as
+  // the checkbox(es) inside it, which is exactly the collision that caused
+  // SIG-1222's C1 (see probeContainer's doc comment above).
   walkLastStep = "checking for the disclosure/consent modal";
-  const consentModal = stepLocator(page, "disclosure", "#concent-modal");
-  const consentModalPresent = await consentModal
-    .waitFor({ state: "visible", timeout: 8000 })
-    .then(() => true)
-    .catch(() => false);
-  if (consentModalPresent) {
-    await noteFallbackIfUsed(page, "disclosure");
+  const consentModal = stepLocator(page, "disclosure-modal", "#concent-modal");
+  const consentModalProbe = await probeContainer(consentModal, 8000);
+  if (consentModalProbe.outcome === "ambiguous") {
+    await browser.close();
+    fail("CEREMONY_CONTAINER_AMBIGUOUS", `While checking for the disclosure/consent modal, the container selector matched more than one element (or errored) instead of exactly one: ${consentModalProbe.detail}. Refusing to guess which one is the real modal — an ambiguous match is not the same as "not on this page".`, [
+      "Re-run with PWDEBUG=1 to watch the browser",
+      'The disclosure-modal contract value may now also be matching something it should not — inspect the page and narrow the selector',
+    ]);
+  }
+  if (consentModalProbe.outcome === "present") {
+    await noteFallbackIfUsed(page, "disclosure-modal");
     walkLastStep = "checking the disclosure agreement checkbox(es)";
-    await checkAllCheckboxes(consentModal);
+    await checkAllCheckboxes(consentModal, "disclosure");
     await clickStep({
       step: "clicking Agree and Continue",
       locator: stepLocator(page, "disclosure-continue", "#continue-consent-button"),
@@ -369,6 +520,10 @@ if (import.meta.url === `file://${process.argv[1]}`) {
       timeout: 10000,
     });
   }
+  // consentModalProbe.outcome === "absent": genuinely not on this page —
+  // nothing to do, and nothing was reported as satisfied for it (see
+  // fallbackStepsUsed / noteFallbackIfUsed above, which was never called in
+  // this branch).
 
   // Step 2: "Start" — begins signing / scrolls to the first place. Some
   // ceremonies open straight into the document with nothing to click here.
@@ -394,21 +549,28 @@ if (import.meta.url === `file://${process.argv[1]}`) {
 
   // Step 4: the signature adoption modal — fill the typed signature (usually
   // pre-filled with the recipient's name; fill it explicitly if it isn't),
-  // check the adoption agreement checkbox, then "Adopt and Sign".
+  // check the adoption agreement checkbox, then "Adopt and Sign". The
+  // container selector is `adopt-modal` — deliberately NOT `adopt`, the
+  // checkbox value inside it (see the disclosure-modal comment above for
+  // why that distinction matters).
   walkLastStep = "waiting for the signature adoption modal";
-  const adoptionModal = stepLocator(page, "adopt", "#adoption-modal");
-  const adoptionModalPresent = await adoptionModal
-    .waitFor({ state: "visible", timeout: 15000 })
-    .then(() => true)
-    .catch(() => false);
-  if (!adoptionModalPresent) {
+  const adoptionModal = stepLocator(page, "adopt-modal", "#adoption-modal");
+  const adoptionModalProbe = await probeContainer(adoptionModal, 15000);
+  if (adoptionModalProbe.outcome === "ambiguous") {
+    await browser.close();
+    fail("CEREMONY_CONTAINER_AMBIGUOUS", `While waiting for the signature adoption modal, the container selector matched more than one element (or errored) instead of exactly one: ${adoptionModalProbe.detail}. Refusing to guess which one is the real modal.`, [
+      "Re-run with PWDEBUG=1 to watch the browser",
+      "The adopt-modal contract value may now also be matching something it should not — inspect the page and narrow the selector",
+    ]);
+  }
+  if (adoptionModalProbe.outcome === "absent") {
     await browser.close();
     fail("CEREMONY_WALK_STEP_NOT_FOUND", 'Could not find the signature adoption modal after clicking the signature box.', [
       "Re-run with PWDEBUG=1 to watch the browser",
       "The ceremony UI may differ from the sequence this script expects — inspect and update the selectors",
     ]);
   }
-  await noteFallbackIfUsed(page, "adopt");
+  await noteFallbackIfUsed(page, "adopt-modal");
 
   walkLastStep = "filling the typed signature";
   const typedInput = stepLocator(adoptionModal, "signature-input", "#typed_symbol");
@@ -421,7 +583,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   }
 
   walkLastStep = "checking the signature adoption agreement checkbox(es)";
-  await checkAllCheckboxes(adoptionModal);
+  await checkAllCheckboxes(adoptionModal, "adopt");
 
   await clickStep({
     step: "clicking Adopt and Sign",
@@ -476,6 +638,17 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     key,
     timeoutMs: completeTimeoutMs,
   });
+
+  if (result.code === "RECIPIENT_KEY_UNRESOLVED") {
+    fail(
+      "RECIPIENT_KEY_UNRESOLVED",
+      `Could not determine which recipient's ceremony this walk drove (the ceremony_id claim in the URL's token could not be parsed), so completion cannot be verified against the right recipient. On a multi-recipient envelope, checking an arbitrary recipient instead could report "verified: true" for a walk that signed nothing — refusing to guess.`,
+      [
+        "Pass --recipient <key> explicitly so verification knows who to check",
+        `curl -sS -H "X-API-Key: $SIGNATUREAPI_KEY" ${API}/envelopes/${envelopeId}`,
+      ],
+    );
+  }
 
   if (!result.completed) {
     fail(
