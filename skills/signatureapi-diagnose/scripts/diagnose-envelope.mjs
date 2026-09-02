@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { ok, fail, requireTestKey } from "./lib/output.mjs";
+import { ok, fail, resolveKey } from "./lib/output.mjs";
 
 const API = process.env.SIGNATUREAPI_BASE_URL ?? "https://api.signatureapi.com/v1";
 
@@ -64,7 +64,12 @@ function arg(name) {
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
-  const key = requireTestKey(process.env.SIGNATUREAPI_KEY);
+  // This skill is read-only by construction (GET requests only — see
+  // references/errors.md and the SKILL.md `allowed-tools` restriction), so
+  // it may run against a live key with no flag: reading a production
+  // envelope during an incident is exactly the behaviour wanted here,
+  // inside this guarded, GET-only path, rather than in improvised curl.
+  const { key, mode } = resolveKey(process.env.SIGNATUREAPI_KEY);
   const id = arg("envelope");
   if (!id) fail("MISSING_ENVELOPE_ID", "Pass --envelope <id>.", ["node diagnose-envelope.mjs --envelope env_..."]);
 
@@ -81,6 +86,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
 
   const events = eventsRes?.data ?? [];
   ok({
+    mode,
     envelope_id: id,
     status: envelope.status,
     events: events.map((e) => e.type),
