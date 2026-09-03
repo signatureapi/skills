@@ -54,8 +54,13 @@ the same file the Claude Code and Grok Build plugins install elsewhere.
   an envelope stuck in processing, a webhook that never arrived, a recipient who never got the
   signing email, a missing deliverable, or a validation error on create.
 
-Each skill talks to the MCP server first and falls back to the REST API when a tool is missing.
-Its `SKILL.md` also carries a handful of scripts for the parts an agent shouldn't improvise:
+The two surfaces are kept apart on purpose. The code an agent writes into your application calls
+the REST API (`https://api.signatureapi.com/v1`); the MCP server and the bundled scripts are the
+agent's own tools for inspecting and proving the flow while it works, and never a runtime
+dependency of your app. The skills inline concepts and gotchas only — field names, enum values,
+event types and limits are read from the published OpenAPI spec on demand, and a CI test fails
+this repo whenever an identifier a skill mentions stops existing in that spec.
+Each `SKILL.md` also carries a handful of scripts for the parts an agent shouldn't improvise:
 querying the OpenAPI spec instead of reading a 108 KB docs page, minting a test document and
 creating a test envelope, watching for events or receiving webhooks locally, walking a real
 browser through a ceremony, and pulling a verdict for a stuck envelope.

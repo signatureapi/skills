@@ -1,0 +1,27 @@
+name: test
+
+# Push and PR runs catch a skill edit that names something the spec doesn't
+# have. The daily run catches the other direction: the spec changed under a
+# published skill. Both fail the same test (test/spec-drift.test.mjs).
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "17 6 * * *"
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install each skill's dependencies
+        run: |
+          for dir in skills/*/; do
+            (cd "$dir" && npm ci)
+          done
+      - run: npm test

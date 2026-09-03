@@ -27,9 +27,11 @@ one — creating the envelope may belong there rather than inline.
 
 ## Two mistakes to avoid
 
-- **Calling `create_envelope` synchronously in a request handler the user is
+- **Calling `POST /envelopes` synchronously in a request handler the user is
   waiting on.** The domain action (e.g. "confirm order") should complete on
   its own; kick off the envelope creation the way this codebase already does
-  other side effects that shouldn't block the response.
+  other side effects that shouldn't block the response. (The application
+  calls the REST API directly — the MCP tool of the same purpose is yours,
+  not the app's.)
 - **Not persisting the envelope id.** Without it, nothing can look the
   envelope up again when a webhook or poll reports its status.

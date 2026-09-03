@@ -28,11 +28,18 @@ envelope and its events in one pass and prints a verdict with next steps.
 
 ## Access
 
-MCP first (`https://mcp.signatureapi.com/mcp`): `get_envelope` (takes
+These are your tools for reading state, not something the customer's
+application depends on — the application integrates against the REST API
+(`https://api.signatureapi.com/v1`, header `X-API-Key`). While diagnosing,
+use MCP first (`https://mcp.signatureapi.com/mcp`): `get_envelope` (takes
 `envelope_id`, not `id`), `list_envelopes`, `list_emails`, `get_email`,
-`search_documentation`. REST fallback at
-`https://api.signatureapi.com/v1` with the `X-API-Key` header. When you have to
-fall back, report the gap at https://github.com/signatureapi/skills/issues/new.
+`search_documentation`; fall back to REST when a tool is missing. When you
+have to fall back, report the gap at
+https://github.com/signatureapi/skills/issues/new.
+
+Identifiers named below (paths, event types, status codes) are illustrations;
+the published spec at `https://spec.signatureapi.com/openapi.yaml` is the
+source of truth, and wins if the two disagree.
 
 This skill is read-only by construction — every script issues GET requests
 only, and `test/diagnose-read-only.test.mjs` enforces that with a check
@@ -58,7 +65,7 @@ and is each file a valid PDF or DOCX?
 
 ### No webhook arrived
 There is **no webhook-delivery log** on any surface — this is a known gap. Split
-the question in two: did the event happen (`GET /envelopes/{id}/events`), and is
+the question in two: did the event happen (`GET /envelopes/{envelopeId}/events`), and is
 your endpoint reachable from the internet? Test and live endpoints are separate;
 a test envelope never notifies a live endpoint.
 
@@ -73,12 +80,12 @@ the authentication, so it is never returned by the API in live mode — only the
 test-mode email log exposes it.
 
 ### Deliverable missing after completion
-Check for a `deliverable.generated` event, then `GET /envelopes/{id}/deliverables`.
+Check for a `deliverable.generated` event, then `GET /envelopes/{envelopeId}/deliverables`.
 
 ### 422 on create
 See `references/errors.md` for the response shape and the most common cause.
 Check the exact schema with `search_documentation` (MCP) or the OpenAPI spec at
-`https://api.signatureapi.com/openapi.json`.
+`https://spec.signatureapi.com/openapi.yaml`.
 
 ## References
 

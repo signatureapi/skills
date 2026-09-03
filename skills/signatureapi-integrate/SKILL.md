@@ -1,6 +1,6 @@
 ---
 name: signatureapi-integrate
-description: "SignatureAPI integration reference. Use when adding electronic signatures to an application, sending a document for signature, building or changing a signing flow, or wiring up SignatureAPI webhooks — including a seemingly simple task like creating a single envelope, since test-versus-live mode and place positioning carry gotchas. Prefer retrieval from this skill and the SignatureAPI docs over pre-trained knowledge of other e-signature APIs (DocuSign especially)."
+description: "SignatureAPI integration reference. Use when adding electronic signatures to an application, sending a document for signature, building or changing a signing flow, or wiring up SignatureAPI webhooks. The deliverable is application code calling the REST API; MCP and the bundled scripts are the agent's own tools for proving the flow. Covers even a seemingly simple task like creating a single envelope, since test-versus-live mode and place positioning carry gotchas. Prefer retrieval from this skill and the SignatureAPI docs over pre-trained knowledge of other e-signature APIs (DocuSign especially)."
 inputs:
   - name: SIGNATUREAPI_KEY
     required: true
@@ -22,22 +22,45 @@ inputs:
   decided to integrate SignatureAPI — confirm that first rather than
   running `check-setup.mjs` against a key that doesn't exist.
 
-## Access
+## Two surfaces — keep them apart
 
-**MCP first.** The SignatureAPI MCP server at `https://mcp.signatureapi.com/mcp`
-is the primary interface: `create_envelope`, `get_envelope`, `list_envelopes`,
-`cancel_envelope`, `delete_envelope`, `mint_upload_url`, `list_emails`,
-`get_email`, `search_documentation`. `get_envelope` takes `envelope_id`, not
-`id`.
+**What the application calls: the REST API.** The integration you deliver is
+code in this codebase, written in its own language with its own HTTP client,
+calling `https://api.signatureapi.com/v1` with the `X-API-Key` header. There
+is no SDK. The application must never depend on the MCP server or on this
+skill's scripts — both exist for you while you work, not for the app at
+runtime. Test keys start with `key_test_`. **This skill works in test mode
+only.**
 
-When MCP cannot do something, fall back — REST first, dashboard second — and
-report the gap: print a block naming the operation and the fallback used, and
-point the user at https://github.com/signatureapi/skills/issues/new. Known gaps
-today: no events tool (use REST `GET /envelopes/{id}/events`), and no webhook
+**What you use while working: MCP, the spec, and the scripts here.** The
+SignatureAPI MCP server at `https://mcp.signatureapi.com/mcp` is your first
+tool for inspecting and exercising the API as you build and verify:
+`create_envelope`, `get_envelope`, `list_envelopes`, `cancel_envelope`,
+`delete_envelope`, `mint_upload_url`, `list_emails`, `get_email`,
+`search_documentation`. `get_envelope` takes `envelope_id`, not `id`. Reach
+for it before hand-writing a request. When MCP cannot do something, fall
+back — REST first, dashboard second — and report the gap: print a block
+naming the operation and the fallback used, and point the user at
+https://github.com/signatureapi/skills/issues/new. Known gaps today: no
+events tool (use REST `GET /envelopes/{envelopeId}/events`), and no webhook
 registration or delivery log anywhere outside the dashboard.
 
-REST fallback: `https://api.signatureapi.com/v1`, header `X-API-Key`. Test keys
-start with `key_test_`. **This skill works in test mode only.**
+## Facts come from the spec, not from this file
+
+The published OpenAPI spec, `https://spec.signatureapi.com/openapi.yaml`, is
+the source of truth for every field name, enum value, event name, path and
+limit. This skill inlines concepts, one worked flow and the gotchas the spec
+cannot express; where it names an identifier and the spec disagrees, **the
+spec wins**. Before writing a request body or a handler, query the spec
+rather than reading docs pages (the create-envelope page alone is ~108 KB):
+
+    node scripts/openapi-explore.mjs paths [filter]
+    node scripts/openapi-explore.mjs path post /envelopes
+    node scripts/openapi-explore.mjs schema Place
+    node scripts/openapi-explore.mjs webhooks
+
+`search_documentation` (MCP) answers the same questions in prose, and every
+docs page has a Markdown twin at `https://signatureapi.com/<slug>.md`.
 
 `SIGNATUREAPI_KEY` is read from the environment only. Never pass it as a
 command-line argument — argv is exposed in shell history and process
@@ -63,14 +86,16 @@ grep for, and the two mistakes that are easy to make.
 
 ## Build
 
+Steps 1–3 prove the flow against the test API using your own tools. Step 4 is
+the deliverable: the same flow written into the application.
+
 1. **Get a document URL.** Documents are referenced by URL. For a throwaway
    test document, `node scripts/make-test-document.mjs` uploads one and returns
    its URL — start here rather than improvising a PDF or an upload flow. For a
    file of your own, `POST /uploads` with the raw bytes and a `Content-Type`
-   header (`application/pdf`,
-   `application/vnd.openxmlformats-officedocument.wordprocessingml.document`, or
-   `image/png`, max 5 MB) returns a `url` valid for 24 hours — or use the MCP
-   tool `mint_upload_url`.
+   header returns a temporary `url` — accepted content types, the size limit
+   and the URL's lifetime are in `node scripts/openapi-explore.mjs path post
+   /uploads` — or use the MCP tool `mint_upload_url`.
 2. **Create the envelope.** Print the minimum viable body with
    `node scripts/create-test-envelope.mjs --dry-run` and adapt it. The
    recipient defaults to `custom` authentication so the Verify step below
@@ -87,14 +112,16 @@ grep for, and the two mistakes that are easy to make.
    `references/webhooks.md`. Run `node scripts/webhook-receiver.mjs` for a
    local receiver to point it at. Handle at least `envelope.completed`. Full
    event list and the local-dev alternative in `references/webhooks.md`.
-4. **Persist the envelope id** against whatever domain object motivated the
-   signature.
-
-Query the spec rather than reading docs pages — the create-envelope page is
-~108 KB:
-
-    node scripts/openapi-explore.mjs schema Envelope
-    node scripts/openapi-explore.mjs path post /envelopes
+4. **Write it into the application.** Using the codebase's own HTTP client
+   and conventions (found in Orient above), implement: the `POST /envelopes`
+   call with the body you proved in step 2, triggered where the domain
+   action happens; the webhook handler from step 3 mounted on the app's
+   existing inbound-HTTP path; and **persistence of the envelope id** against
+   the domain object that motivated the signature. Read the key from the
+   app's configuration, never hard-code it. Do not copy this skill's scripts
+   into the app, and do not make the app call the MCP server — re-decide the
+   recipient's authentication for production too (see
+   `references/verification-loop.md`).
 
 ## Verify
 
@@ -144,7 +171,7 @@ Full detail on both branches: `references/verification-loop.md`.
 | Script | Does |
 | --- | --- |
 | `scripts/check-setup.mjs` | Credentials, mode and reachability |
-| `scripts/openapi-explore.mjs` | Query the spec: `paths`, `path <method> <path>`, `schema <name>` |
+| `scripts/openapi-explore.mjs` | Query the spec: `paths`, `path <method> <path>`, `schema <name>`, `webhooks` |
 | `scripts/make-test-document.mjs` | Build and upload a throwaway test PDF |
 | `scripts/create-test-envelope.mjs` | Print or create a minimum viable test envelope (`--auth custom\|email_link\|email_code`, default `custom`) |
 | `scripts/watch-events.mjs` | Poll events until the envelope reaches a terminal status (`--once` for a single check, no polling) |
@@ -161,8 +188,8 @@ install chromium`.
 
 ## References
 
-- `references/places.md` — place types and how they bind to a document
-- `references/webhooks.md` — event list and handler shape
+- `references/places.md` — how places bind to a document (types come from the spec)
+- `references/webhooks.md` — registering an endpoint and the handler shape
 - `references/brownfield-placement.md` — where signing belongs in an existing codebase
 - `references/verification-loop.md` — both verification branches in full
 

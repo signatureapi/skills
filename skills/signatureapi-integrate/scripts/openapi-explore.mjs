@@ -7,6 +7,23 @@ import { ok, fail } from "./lib/output.mjs";
 
 const SPEC_URL = process.env.SIGNATUREAPI_SPEC_URL ?? "https://spec.signatureapi.com/openapi.yaml";
 
+/** Every webhook event type declared in the spec's top-level `webhooks`
+ * section, optionally filtered by substring, each with the payload schema its
+ * POST body declares. */
+export function listWebhooks(spec, filter) {
+  const out = [];
+  for (const [type, item] of Object.entries(spec?.webhooks ?? {})) {
+    if (filter && !type.toLowerCase().includes(filter.toLowerCase())) continue;
+    const op = item?.post ?? {};
+    out.push({
+      type,
+      summary: op.summary ?? op.description ?? null,
+      payload: op.requestBody?.content?.["application/json"]?.schema ?? null,
+    });
+  }
+  return out;
+}
+
 export function selectSchema(spec, name) {
   const schemas = spec?.components?.schemas ?? {};
   const hit = Object.keys(schemas).find((k) => k.toLowerCase() === name.toLowerCase());
@@ -41,6 +58,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
         "openapi-explore.mjs paths [filter]        list operations, optionally filtered by substring",
         "openapi-explore.mjs path <method> <path>  show one operation's request body and responses",
         "openapi-explore.mjs schema <name>         show one schema's properties and required fields",
+        "openapi-explore.mjs webhooks [filter]     list webhook event types with their payload schema",
       ],
     });
   }
@@ -87,6 +105,16 @@ if (import.meta.url === `file://${process.argv[1]}`) {
       properties: Object.keys(schema.properties ?? {}),
       schema,
     });
+  }
+
+  if (mode === "webhooks") {
+    const events = listWebhooks(spec, args[0]);
+    if (events.length === 0) {
+      fail("WEBHOOK_NOT_FOUND", `No webhook event type matches "${args[0] ?? ""}".`, [
+        "node scripts/openapi-explore.mjs webhooks",
+      ]);
+    }
+    ok({ count: events.length, events });
   }
 
   fail("UNKNOWN_MODE", `Unknown mode "${mode}".`, ["node scripts/openapi-explore.mjs --help"]);

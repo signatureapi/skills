@@ -5,17 +5,17 @@ integration context, not production guidance on its own. Full workflow:
 SKILL.md.*
 
 A place is an interactive region on a document, bound to one recipient by
-`recipient_key`, which must match that recipient's `key` exactly. Types:
-`signature`, `initials`, `text`, `text_input`, `boxed_text_input`,
-`multi_line_text_input`, `checkbox`, `dropdown`, `envelope_date`,
-`recipient_name`, `recipient_email`.
+`recipient_key`, which must match that recipient's `key` exactly.
 
-`key` must match `^[a-z][a-z0-9_]*$` and be at most 32 characters.
-
-For exact fields per type — required vs. optional, size and formatting options
-— query the spec rather than guessing:
+The list of place types, the fields each type takes, and the constraints on
+`key` live in the spec, not here — read them from it before writing a place:
 
     node scripts/openapi-explore.mjs schema Place
+
+The `type` property's `enum` in that output is the complete list (signature,
+initials, text inputs, checkbox, dropdown, radio group, dates, recipient name
+and email); its `description` says what each one does. If anything in this
+file and that output disagree, the spec wins.
 
 ## Binding to a document
 

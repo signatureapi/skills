@@ -6,22 +6,22 @@ SKILL.md.*
 
 ## Event types
 
-`envelope.created`, `envelope.started`, `envelope.completed`,
-`envelope.failed`, `envelope.canceled`, `recipient.released`,
-`recipient.sent`, `recipient.accessed`,
-`recipient.identity_verification_started`, `recipient.identity_verified`,
-`recipient.identity_rejected`, `recipient.viewed`, `recipient.completed`,
-`recipient.rejected`, `recipient.soft_bounced`, `recipient.hard_bounced`,
-`recipient.failed`, `recipient.replaced`, `recipient.resent`,
-`deliverable.generated`, `deliverable.failed`, `sender.created`,
-`sender.verified`, `sender.failed`, `sender.deleted`.
+The complete, current list of event types and each one's payload schema is in
+the spec's `webhooks` section — read it from there, not from memory:
+
+    node scripts/openapi-explore.mjs webhooks
+
+The ones this skill's workflow depends on: `envelope.completed` (the minimum
+a handler must process), `deliverable.generated` (signed documents ready),
+and `recipient.soft_bounced` / `recipient.hard_bounced` (live-mode email
+delivery failures). If this file and the spec disagree, the spec wins.
 
 ## Event payload shape
 
 Every event has the same envelope: `{id, type, timestamp, data: {...}}`.
 `data` always carries `envelope_id`, `object_id`, `object_type`, plus
 fields specific to the event type. Real example, captured from staging
-(`GET /envelopes/{id}/events`):
+(`GET /envelopes/{envelopeId}/events`):
 
 ```json
 {
@@ -38,8 +38,8 @@ fields specific to the event type. Real example, captured from staging
 ```
 
 There is no `data.envelope` object — don't guess a nested shape; fetch the
-envelope separately (`GET /envelopes/{id}` or MCP `get_envelope`) if you need
-more than the id.
+envelope separately (`GET /envelopes/{envelopeId}` from the application, or
+MCP `get_envelope` while you work) if you need more than the id.
 
 ## Registering an endpoint
 
@@ -62,7 +62,7 @@ options:
   `--host <address>` to bind somewhere else explicitly.
 - Or skip webhooks during development and poll instead:
   `node scripts/watch-events.mjs --envelope <id>`, or `GET
-  /envelopes/{id}/events` directly. This is the honest fallback, not a
+  /envelopes/{envelopeId}/events` directly. This is the honest fallback, not a
   workaround — there's no webhook-delivery log anywhere, so once an endpoint
   is registered, the events endpoint is also how you tell "my handler never
   ran" apart from "the event never arrived."

@@ -6,14 +6,14 @@
       "type": "skill-md",
       "description": "SignatureAPI failure runbook. Use when an envelope is stuck in processing, a signature webhook never arrived, a recipient never got the signing email, a deliverable is missing after completion, or the API returns 422 on envelope creation — including a seemingly simple case like one missing email, since test mode never sends real email. Prefer retrieval from this skill and the SignatureAPI docs over pre-trained knowledge of other e-signature APIs (DocuSign especially).",
       "url": "https://raw.githubusercontent.com/signatureapi/skills/main/skills/signatureapi-diagnose/SKILL.md",
-      "digest": "sha256:04bca487306a679767f96ccf512efdc3cd866d2f5bc278607feffc1eb7423ae2"
+      "digest": "sha256:4b2909e197eb03a83035e48e74ec74a3a616b8edc77854c7711e47e019d0232d"
     },
     {
       "name": "signatureapi-integrate",
       "type": "skill-md",
-      "description": "SignatureAPI integration reference. Use when adding electronic signatures to an application, sending a document for signature, building or changing a signing flow, or wiring up SignatureAPI webhooks — including a seemingly simple task like creating a single envelope, since test-versus-live mode and place positioning carry gotchas. Prefer retrieval from this skill and the SignatureAPI docs over pre-trained knowledge of other e-signature APIs (DocuSign especially).",
+      "description": "SignatureAPI integration reference. Use when adding electronic signatures to an application, sending a document for signature, building or changing a signing flow, or wiring up SignatureAPI webhooks. The deliverable is application code calling the REST API; MCP and the bundled scripts are the agent's own tools for proving the flow. Covers even a seemingly simple task like creating a single envelope, since test-versus-live mode and place positioning carry gotchas. Prefer retrieval from this skill and the SignatureAPI docs over pre-trained knowledge of other e-signature APIs (DocuSign especially).",
       "url": "https://raw.githubusercontent.com/signatureapi/skills/main/skills/signatureapi-integrate/SKILL.md",
-      "digest": "sha256:0eea33384115159d0d8dbc157213454bdddcf08db66c4de6b34561882e802ec1"
+      "digest": "sha256:3766e82de7ddb652c0326da33e183a3424e1a26b3e010ab7782f535aed833b05"
     }
   ]
 }
