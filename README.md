@@ -48,6 +48,19 @@ so upfront instead, we do: Codex's manifest sets `policy.authentication: "ON_INS
 Gemini's sets `oauth.enabled: true`, so those two prompt for auth at install time rather than
 deferring silently to first use.
 
+**Staying current.** Claude Code turns auto-update off for third-party marketplaces, so enable it
+once after installing: run `/plugin`, open **Marketplaces**, select `signatureapi`, and choose
+**Enable auto-update**. Claude Code then checks after each session start and offers
+`/reload-plugins` when a new version has landed. To update by hand instead:
+
+```text
+/plugin marketplace update signatureapi
+/plugin update signatureapi@signatureapi
+```
+
+The Claude Code plugin is versioned by commit, so every merge to `main` is a new version; there
+is no release step to wait for.
+
 Each plugin install is all-or-nothing: skills and MCP server install and uninstall together.
 There's no flag to take one without the other, and (for Claude Code) `claude mcp remove` refuses
 to remove a plugin-owned server. If you want the skills without the MCP server, use the
