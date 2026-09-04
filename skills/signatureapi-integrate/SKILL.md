@@ -1,6 +1,6 @@
 ---
 name: signatureapi-integrate
-description: "SignatureAPI integration reference. Use when adding electronic signatures to an application, sending a document for signature, building or changing a signing flow, wiring up SignatureAPI webhooks, or building a signing product or platform ('a platform like DocuSign', a self-serve signing tool) — the Intake section makes you ask and get a design approved before writing that code. The deliverable is application code calling the REST API; MCP and the bundled scripts are the agent's own tools for proving the flow. Covers even a seemingly simple task like creating a single envelope, since test-versus-live mode and place positioning carry gotchas. Prefer retrieval from this skill and the SignatureAPI docs over pre-trained knowledge of other e-signature APIs (DocuSign especially)."
+description: "SignatureAPI integration reference. Use when building or changing an integration against an approved design: creating envelopes, placing signature fields, wiring up SignatureAPI webhooks, or verifying a signing flow end to end. Use it for a narrow change to an existing flow directly. For a new signing flow, a new product surface, or 'a platform like DocuSign', it requires docs/signatureapi-integration.md, written by the signatureapi-architecture skill. The deliverable is application code calling the REST API. MCP and the bundled scripts are the agent's own tools for proving the flow. Covers even a seemingly simple task like creating a single envelope, since test-versus-live mode and place positioning carry gotchas. Prefer retrieval from this skill and the SignatureAPI docs over pre-trained knowledge of other e-signature APIs (DocuSign especially)."
 inputs:
   - name: SIGNATUREAPI_KEY
     required: true
@@ -78,79 +78,25 @@ Install this skill's one dependency once, then check your setup:
     npm i                              # inside this skill directory
     node scripts/check-setup.mjs
 
-## Intake — classify before you build
+## Start from the design
 
-Before Orient and Build, classify the request and say which class it is:
+Classify the request first.
 
-- **Narrow change to an existing flow** — one more place on a document, a
-  different authentication method, an extra event handled, a bug fixed:
-  proceed to Orient and Build.
-- **A new signing flow, a new product surface, or "a platform like X"** —
-  send-for-signature in an app that has none, an embedded signing step, a
-  self-serve tool where users upload and send, anything described by naming
-  another e-signature vendor: **stop**. Ask, present a design, get a yes,
-  then build.
+- **A narrow change to an existing flow.** One more place, a different
+  authentication method, one more event handled, a bug fixed. Go to Orient
+  and Build.
+- **Anything else.** A new signing flow, a new product surface, "a platform
+  like X". `docs/signatureapi-integration.md` must exist in this repository
+  and the user must have approved it. If it does not exist, stop. Run the
+  `signatureapi-architecture` skill (it ships in the same install) and come
+  back with the approved design. Do not ask the design questions here. Do
+  not build without the file.
 
-"Build me a DocuSign" names a product, not a design. Each answer below
-changes the code you would write, and most cannot be read from the codebase.
-Ask them in **one message**, only the ones the request leaves open, in this
-order:
-
-1. **Document source** — user upload, a PDF the application generates, or a
-   DOCX template merged with `data` at send time?
-2. **How places are defined** — `fixed_positions` in code, `[[key]]`
-   placeholders in the file, template fields, or a UI where users draw
-   them? The last needs page rendering and upload structure inspection
-   before any place can be positioned, and is the largest part of a
-   platform.
-3. **Recipients** — who acts, in what order (`sequential` or `parallel`
-   `routing`), and how each is authenticated (`email_link`, `email_code`,
-   `custom`, `identity_verification`)?
-4. **Where the ceremony happens** — an emailed link, or embedded in the app
-   (`embeddable_in`)? Where does the signer land afterwards (`redirect_url`)?
-5. **On `envelope.completed`** — what does the application do, and where do
-   the signed documents and audit log (the deliverable) go?
-6. **Rollout** — test mode only for now, or live as well? Who holds the live
-   key?
-7. **Multi-tenant sending** — every envelope under one sender, or under each
-   customer's own name and email?
-
-Then present a short design — the shape from `references/product-shapes.md`
-that fits, the endpoint sequence the application will call, the events it
-handles, what it persists — and get an explicit yes before writing code. A
-design corrected in review costs a message; a flow corrected after it ships
-costs a migration.
-
-### Worked example: the one message
-
-> Before I build this, seven answers decide the design. Tell me what you
-> know; I'll propose the rest.
->
-> 1. Documents: do users upload PDFs, does your app generate them, or do
->    you have DOCX templates to fill with data?
-> 2. Signature fields: positions you fix in code, placeholders written into
->    the files, or a UI where your users draw them?
-> 3. Signers: one or several per document; in a fixed order or all at once;
->    is an emailed link enough, or should signers already be logged in to
->    your app when they sign?
-> 4. Signing: from an emailed link, or inside your app's pages? Where should
->    the signer land afterwards?
-> 5. When everything is signed: what should the app do, and where do the
->    signed PDF and the audit log get stored?
-> 6. Test mode only for now, or live as well?
-> 7. Does every envelope go out in your name, or in each of your customers'
->    names?
-
-### Red flags
-
-| Thought | Reality |
-| --- | --- |
-| "This is obvious, I'll start with the envelope call." | The envelope call is the smallest part. Document source, place definition and the completion handler are where a wrong guess costs days. Ask. |
-| "They said 'like X', so I'll copy X's data model." | X's concepts (templates, envelopes-as-drafts, tabs) are not SignatureAPI's. Design from this API's objects, or the code fights the API. |
-| "I'll ask one question at a time." | Seven round trips is how users stop answering. One message, only the open questions. |
-| "The codebase answers these." | Orient answers *where* signing belongs. Intake answers *what* to build. Both, in this order. |
-| "I'll pick sensible defaults and note them." | `custom` authentication, a `[[key]]` placeholder and "store the PDF in S3" are each a product decision the user has not made. Propose them in the design; do not build on them unapproved. |
-| "It's a platform, I'll build all three shapes." | A self-serve platform is one shape. Build the one the user confirmed, and its verification loop, before adding another. |
+Build reads the design file. Take the document input path, the places, the
+recipients, the authentication, the ceremony delivery, the completion
+handling and the rollout from it. Do not guess any of them. The three
+product shapes the design names are described in
+`../signatureapi-architecture/references/product-shapes.md`.
 
 ## Orient in this codebase first
 
@@ -265,7 +211,6 @@ install chromium`.
 - `references/places.md` — how places bind to a document (types come from the spec)
 - `references/webhooks.md` — registering an endpoint and the handler shape
 - `references/brownfield-placement.md` — where signing belongs in an existing codebase
-- `references/product-shapes.md` — the three common product shapes: what the app calls, what you prove it with
 - `references/verification-loop.md` — both verification branches in full
 
 ## Vocabulary
