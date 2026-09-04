@@ -881,3 +881,12 @@ handling and the rollout from it. Do not guess any of them.
 - **Brief coverage:** A (new skill, six body parts, product-shapes moved) — R2-3. B (Start from the design, description, fallbacks and known-gaps kept) — R2-4. C (STYLE.md, pass on all three skills, style test) — R2-1, R2-5. D (manifests, filemap, structure test, allowlist kept, npm test count, plan Revision 2) — R2-2, R2-6, R2-7.
 - **Placeholder scan:** the architecture SKILL.md prose is written in R2-3 from the outline above; the outline names every heading, row and identifier, so no step depends on an undefined name.
 - **Consistency:** the headings pinned by the structure test in R2-2 are the headings listed in R2-3 step 2; the file path `docs/signatureapi-integration.md` is spelled the same in R2-3, R2-4 and the test.
+
+## Deviations recorded during execution (Revision 2)
+
+- **`openapi-explore.mjs schema Place` never worked.** It returns `SCHEMA_NOT_FOUND`; the spec has no schema named `Place`. Both mentions (integrate `SKILL.md` and `references/places.md`) now use `Place.Type` (the type enum with one line per type) and `Place.PlaceInput` (the per-type input schemas). This is the one fact change in the wording pass; the identifier check in the brief is what found it.
+- **`ceremony_result` and `recipient_id` are not spec identifiers.** They appear only in the `Ceremony.RedirectUrl` description as query-parameter names, so the spec-drift walker does not collect them. The decision matrix now describes them as "the outcome, the envelope id and the recipient id" and points at `Ceremony.RedirectUrl`, the same way `product-shapes.md` already did, instead of allowlisting them.
+- **The style test treats frontmatter as prose.** Both long descriptions were split into short sentences rather than exempted; the descriptions are what the manifests publish, so they should read plainly too.
+- **`.github/workflows/test.yml` had to change.** Its loop ran `npm ci` in every `skills/*/`; the architecture skill has no scripts, so no `package.json` or lockfile. The loop now skips directories without `package-lock.json`.
+- **Only `agent-skills.json`, `FILEMAP.md` and the `keywords` arrays changed under `npm run manifests`/`filemap`.** `gemini-extension.json` lists no skills at all (MCP only), so it is unchanged.
+- **`npm test`: 61 passing** (57 after Revision 1). New: 3 style tests, 1 net structure test (4 replace 3).
