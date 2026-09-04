@@ -1,29 +1,29 @@
 # Product shapes
 
-*Reference for the SignatureAPI signatureapi-integrate skill — test-mode
-integration context, not production guidance on its own. Full workflow:
-SKILL.md.*
+*Reference for the SignatureAPI signatureapi-architecture skill. It names
+the REST calls an app makes and the tools an agent proves them with. Design
+context, not production guidance on its own. Full workflow: SKILL.md.*
 
-Three shapes cover most requests that reach the Intake gate. Each one lists
+Three shapes cover most requests that reach this skill. Each one lists
 what the **application** calls (REST, in its own language), what **you** use
 to prove it while you work (MCP tools and this skill's scripts — never a
-runtime dependency of the app), the decisions Intake must settle before
+runtime dependency of the app), the decisions the design document must settle before
 building, and the two mistakes most likely in that shape.
 
 Identifiers here are illustrations; the spec wins. Query it before writing a
 body:
 
-    node scripts/openapi-explore.mjs path post /envelopes
-    node scripts/openapi-explore.mjs schema Ceremony.CeremonyInput
+    node ../../signatureapi-integrate/scripts/openapi-explore.mjs path post /envelopes
+    node ../../signatureapi-integrate/scripts/openapi-explore.mjs schema Ceremony.CeremonyInput
 
 **Tool availability.** Tools marked *(v2)* are part of MCP tool surface v2
 (SIG-1252) and may not be on the server you are connected to yet. Check the
 tool list your client shows; when a *(v2)* tool is missing, use the REST
-fallback named next to it and report the gap as SKILL.md describes. The
+fallback named next to it and report the gap as the signatureapi-integrate SKILL.md describes. The
 webhook tools (`list_webhooks`, `create_webhook`, `get_webhook_secret`,
 `test_webhook`, `list_webhook_attempts`) are on the server when your client
 lists them; otherwise register endpoints in the dashboard as
-`references/webhooks.md` describes.
+`../../signatureapi-integrate/references/webhooks.md` describes.
 
 ## Shape 1 — send-for-signature inside an existing application
 
@@ -54,17 +54,17 @@ action, and the signer is usually outside the app.
 
 - `whoami` *(v2)* to confirm account and mode; `get_test_api_key` *(v2)* to
   put a `key_test_` key into the project's env file without echoing it
-  (fallback: the dashboard's API keys page, then `scripts/check-setup.mjs`).
-- `scripts/make-test-document.mjs`, then `create_envelope` (or
-  `scripts/create-test-envelope.mjs`).
+  (fallback: the dashboard's API keys page, then `../../signatureapi-integrate/scripts/check-setup.mjs`).
+- `../../signatureapi-integrate/scripts/make-test-document.mjs`, then `create_envelope` (or
+  `../../signatureapi-integrate/scripts/create-test-envelope.mjs`).
 - `list_events` *(v2)* with `wait_seconds` to watch `envelope.completed`
-  arrive (fallback: `scripts/watch-events.mjs --envelope <id>`).
+  arrive (fallback: `../../signatureapi-integrate/scripts/watch-events.mjs --envelope <id>`).
 - `get_deliverables` *(v2)* to fetch the signed PDF and audit log with fresh
   URLs (fallback: the two deliverable GETs above).
 - `list_webhook_attempts` to tell "the event fired" apart from "my handler
   never ran" (fallback: events plus the app's own logs).
 
-**Decisions Intake must settle:** document source (app-generated vs upload),
+**Decisions the design document must settle:** document source (app-generated vs upload),
 placeholder vs `fixed_positions`, how many signers and whether `routing` is
 `sequential`, what the app does on completion, where deliverables live, and
 whether the sender is the account or a per-customer `sender`.
@@ -74,7 +74,7 @@ whether the sender is the account or a per-customer `sender`.
 - **Calling `POST /envelopes` inside the request the user is waiting on.**
   Creating the envelope belongs with the codebase's other non-blocking side
   effects (queue, job, domain event). See
-  `references/brownfield-placement.md`.
+  `../../signatureapi-integrate/references/brownfield-placement.md`.
 - **Fetching the deliverable on `recipient.completed`.** The deliverable is
   generated after the envelope completes; handle `envelope.completed` (or
   `deliverable.generated`) and then fetch, and treat a `pending` or
@@ -118,13 +118,13 @@ completion screen shows first.
   the dev origin, never `['*']` in code that ships).
 - `create_ceremony` *(v2)* to exercise re-issuing a link (fallback:
   `POST /recipients/{recipientId}/ceremonies` from a script).
-- `list_events` *(v2)* or `scripts/watch-events.mjs` to see
+- `list_events` *(v2)* or `../../signatureapi-integrate/scripts/watch-events.mjs` to see
   `recipient.completed` and `envelope.completed`.
-- Branch B (`scripts/complete-ceremony.mjs`) works here because a `custom`
+- Branch B (`../../signatureapi-integrate/scripts/complete-ceremony.mjs`) works here because a `custom`
   ceremony has no outstanding challenge — see
-  `references/verification-loop.md`.
+  `../../signatureapi-integrate/references/verification-loop.md`.
 
-**Decisions Intake must settle:** which recipients are in-app (embedded,
+**Decisions the design document must settle:** which recipients are in-app (embedded,
 `custom`) and which are external (emailed), what the page does when the
 iframe reports completion, and how the app maps its own user to the
 recipient.
@@ -133,7 +133,7 @@ recipient.
 
 - **Using `custom` authentication for a recipient the app did not
   authenticate.** It is an assertion in the audit log. External signers get
-  `email_link` or stronger; see `references/verification-loop.md`.
+  `email_link` or stronger; see `../../signatureapi-integrate/references/verification-loop.md`.
 - **Serving the ceremony URL to the wrong session.** The URL is the
   credential for a `custom` ceremony. Render it only to the logged-in user
   who is that recipient, never in a shared or cacheable response, and never
@@ -174,14 +174,14 @@ means, and the one with the most code outside SignatureAPI.
 
 **You prove it with**
 
-- `mint_upload_url` (or `scripts/make-test-document.mjs`), then
+- `mint_upload_url` (or `../../signatureapi-integrate/scripts/make-test-document.mjs`), then
   `inspect_upload` *(v2)* to confirm the page count and sizes your UI will
   draw on (fallback: render the PDF locally and read its page boxes; do not
   guess).
 - `create_envelope` with `fixed_positions`, then open the resulting
   document or a test render to confirm the fields landed where the UI
   showed them — coordinate bugs never surface in the create response.
-- `list_events` *(v2)* / `scripts/watch-events.mjs` for the per-recipient
+- `list_events` *(v2)* / `../../signatureapi-integrate/scripts/watch-events.mjs` for the per-recipient
   events the UI depends on; `replace_recipient` and `resend_request`
   *(v2)* to exercise the repair paths (fallback: the replace REST call; the
   dashboard for resend).
@@ -189,7 +189,7 @@ means, and the one with the most code outside SignatureAPI.
   `list_webhook_attempts` for the endpoint the platform registers, and
   `update_webhook` *(v2)* to point it elsewhere without recreating it.
 
-**Decisions Intake must settle:** all seven Intake questions — this shape
+**Decisions the design document must settle:** every decision in the matrix — this shape
 has no defaults. In particular: whether users draw fields (a rendering and
 coordinate-mapping UI) or the platform only supports placeholders and
 templates; whether each customer sends under a verified `sender`; which
