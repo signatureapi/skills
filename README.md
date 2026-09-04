@@ -6,7 +6,18 @@ line: one for building a signing flow, one for diagnosing one that already exist
 
 ## Install
 
-There are two install paths. They share the same skill content but are not equivalent — pick
+**Let your agent do it.** Paste this into Claude Code, Codex, Cursor, or any agent that can read a
+URL, and it installs the right thing for itself:
+
+```text
+Set up SignatureAPI for me. Read https://signatureapi.com/docs/ai-toolkit/mcp/connecting-clients.md
+and follow the section for the agent you are running in. If I am working on a codebase, install the
+SignatureAPI plugin (skills plus MCP server) rather than the MCP server alone. Ask me before opening
+a browser for sign-in, and never print tokens or keys. When you are done, prove it works by listing
+my 5 most recent test-mode envelopes, then tell me what you changed and how to undo it.
+```
+
+**Or do it by hand.** There are two install paths. They share the same skill content but are not equivalent — pick
 based on whether you also want the hosted MCP server (`https://mcp.signatureapi.com/mcp`,
 OAuth-authenticated) configured.
 
