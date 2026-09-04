@@ -29,10 +29,10 @@ test("parseSkillFrontmatter reads name and description out of the YAML frontmatt
   assert.deepEqual(parseSkillFrontmatter(text), { name: "my-skill", description: "Does the thing." });
 });
 
-test("loadSkills finds both skills and each frontmatter name matches its directory", async () => {
+test("loadSkills finds the three skills and each frontmatter name matches its directory", async () => {
   const skills = await loadSkills();
   const names = skills.map((s) => s.name);
-  assert.deepEqual(names, ["signatureapi-diagnose", "signatureapi-integrate"]);
+  assert.deepEqual(names, ["signatureapi-architecture", "signatureapi-diagnose", "signatureapi-integrate"]);
 });
 
 test("buildAgentSkillsJson digests match sha256sum of the actual SKILL.md bytes", async () => {

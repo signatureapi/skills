@@ -20,8 +20,10 @@ jobs:
         with:
           node-version: 22
       - name: Install each skill's dependencies
+        # Only skills with scripts have a lockfile; signatureapi-architecture
+        # is prose only and has nothing to install.
         run: |
           for dir in skills/*/; do
-            (cd "$dir" && npm ci)
+            [ -f "$dir/package-lock.json" ] && (cd "$dir" && npm ci)
           done
       - run: npm test
