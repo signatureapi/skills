@@ -647,3 +647,237 @@ EOF
 - **Spec coverage** (section 6, SIG-1253 items in scope for this PR): Intake section with classification, one-message questions, design-then-yes — Task 2. `references/product-shapes.md` with the three shapes and the tool/endpoint sequences — Task 3. Items deferred by the task brief (delete known-gaps, replace step 3, `watch-events` → `list_events`, `inspect_upload` in places, `get_test_api_key` in setup, diagnose updates) — listed as the PR-body checklist in Task 4, as instructed.
 - **Placeholder scan**: none; every step carries its full content.
 - **Consistency**: the heading `## Intake — classify before you build` matches the test's `/^## Intake/m`; the References line matches `/^- \`references\/product-shapes\.md\` — /m`; the allowlist group names are only read via `Object.entries(...).flatMap`, so the `$`-prefixed reason keys are skipped exactly as `$comment` is today.
+
+---
+
+# Revision 2 — the intake logic becomes its own skill
+
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this revision task-by-task, inline, no subagents. Steps use checkbox (`- [ ]`) syntax for tracking.
+
+**Goal:** Move the intake logic out of `signatureapi-integrate` into a third skill, `signatureapi-architecture`, that writes a design document (`docs/signatureapi-integration.md` in the user's repository) which `signatureapi-integrate` then requires before building anything but a narrow change; and put every skill through a plain-language pass enforced by a test.
+
+**Why the change (owner decision, after PR #3 opened):** the intake logic has its own trigger ("how should we use SignatureAPI in our app?"), it can run alone, a required input file is a stronger gate than a paragraph inside another skill, and the install must not depend on any third-party brainstorming skill. Two rules now apply to all skills: plain language, and ask when unclear even when something could be inferred.
+
+**Architecture:** Three flat skills under `skills/<name>/SKILL.md` (installer dedupes by `name`, so `name` must equal the directory). `signatureapi-architecture` has no `inputs` (it reads code and asks; it needs no API key) and no scripts; it links to `signatureapi-integrate`'s `openapi-explore.mjs` by relative path for spec checks. `references/product-shapes.md` moves into the architecture skill. `signatureapi-integrate` loses its Intake section and gains a short "Start from the design" gate that requires the design file. A root `STYLE.md` states the writing rules; `test/style.test.mjs` enforces the mechanical ones (sentence length, banned words) over every `skills/**/*.md`.
+
+**Tech Stack:** unchanged — Markdown skills, Node 22 `node --test`, `generate-manifests.mjs`, `update-filemap.mjs`.
+
+**Spec:** the same SIG-1252 spec, section 6, plus the owner's Revision 2 brief (recorded in this section). Read-only.
+
+## Global constraints (Revision 2)
+
+- Same worktree and branch as Revision 1: `/root/orca/workspaces/app/skills-SIG-1253`, `feat/SIG-1253-intake-gate`, so PR #3 grows into the final change. Do not merge, push to `main`, deploy, or install the plugin into any real agent config.
+- Commit per task: `type(scope): summary (SIG-1253)`, with the `Co-Authored-By` and `Claude-Session` trailers on every commit.
+- Wording pass, not a content pass: every fact and identifier in the skills stays as it was. Where a sentence is cut, its instruction survives. Scripts are not touched.
+- Every identifier the new skill names must exist in the live spec (`node skills/signatureapi-integrate/scripts/openapi-explore.mjs …`). v2 MCP tools that have not shipped are named only as "available from MCP tool surface v2 (SIG-1252)" and stay allowlisted with reasons.
+- Any SKILL.md frontmatter change runs both `npm run manifests` and `npm run filemap` (Revision 1 deviation).
+- `npm test` passes at the end; note the count.
+
+## File structure (Revision 2)
+
+- Create `STYLE.md` — the writing rules, root of the repo.
+- Create `test/style.test.mjs` — sentence-length and banned-word check over `skills/**/*.md`.
+- Create `skills/signatureapi-architecture/SKILL.md` — the new skill.
+- Move `skills/signatureapi-integrate/references/product-shapes.md` → `skills/signatureapi-architecture/references/product-shapes.md` (`git mv`; header and links updated).
+- Modify `skills/signatureapi-integrate/SKILL.md` — frontmatter description; `## Intake …` replaced by `## Start from the design`; References list loses product-shapes; plain-language pass.
+- Modify `skills/signatureapi-integrate/references/*.md`, `skills/signatureapi-diagnose/SKILL.md`, `skills/signatureapi-diagnose/references/errors.md` — plain-language pass only.
+- Modify `test/skill-structure.test.mjs` — new layout; `test/generate-manifests.test.mjs` — three skill names; `.github/workflows/test.yml` — `npm ci` only where a lockfile exists.
+- Regenerate `agent-skills.json`, `FILEMAP.md`, `plugin.json` and the per-ecosystem manifests (keywords now list three skills).
+- Modify `README.md` — three skills, one plain line each; "two skills" wording removed.
+
+---
+
+### Task R2-0: Commit this plan section
+
+- [ ] `git add docs/plans/2026-09-04-sig-1253-intake-gate.md && git commit -m "docs(plans): Revision 2 — architecture skill, design-document gate, plain-language style (SIG-1253)"` with trailers.
+
+### Task R2-1: STYLE.md and the style test (fails first)
+
+**Files:** Create `STYLE.md`; create `test/style.test.mjs`.
+
+- [ ] **Step 1: Write `STYLE.md`** with exactly these rules:
+
+```markdown
+# Writing style for the skills
+
+These rules apply to every `SKILL.md` and every file under `references/`.
+`test/style.test.mjs` checks the ones a script can check.
+
+1. Short sentences. Aim under 20 words. Never over 30.
+2. One instruction per sentence.
+3. Common words. Say "use", "check", "ask". Do not say "leverage", "surface", "orchestrate", "utilize", "seamless", "robust", or "in order to".
+4. Imperative mood. "Query the spec", not "the spec should be queried".
+5. No metaphors, aphorisms, or rhetorical flourishes. State the fact.
+6. Define each domain term once, in Vocabulary. Reuse the same word everywhere.
+7. Prefer a list to a paragraph when the items are parallel.
+8. Keep every fact and identifier as it is. A style edit changes wording, not meaning. If you cut a sentence, its instruction must survive somewhere.
+9. Leave the scripts alone. These rules are for prose.
+```
+
+- [ ] **Step 2: Write `test/style.test.mjs`.** Sentence split on `. `, `? `, `! ` after joining wrapped lines inside one block; blocks start at blank lines, list markers, headings, table rows and blockquotes; fenced code, indented code (block whose first line starts with four spaces) and table rows are skipped. Banned words: `leverage`, `orchestrate`, `seamless`, `robust`, `utilize`, `in order to` (word-boundary, case-insensitive; `surface` is skipped because the verb is hard to detect).
+
+```js
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
+import { readFile } from "node:fs/promises";
+
+const execFileAsync = promisify(execFile);
+const MAX_WORDS = 30;
+const BANNED = ["leverage", "orchestrate", "seamless", "robust", "utilize", "in order to"];
+
+async function skillMarkdownFiles() {
+  const { stdout } = await execFileAsync("git", ["ls-files", "skills"]);
+  return stdout.split("\n").filter((f) => f.endsWith(".md") && !f.includes("/node_modules/"));
+}
+
+/** Prose blocks of a markdown file: fenced code, indented code and table rows removed. */
+export function proseBlocks(markdown) {
+  const blocks = [];
+  let current = [];
+  let inFence = false;
+  const flush = () => {
+    if (current.length) blocks.push(current.join(" ").replace(/\s+/g, " ").trim());
+    current = [];
+  };
+  for (const raw of markdown.split("\n")) {
+    const line = raw.replace(/\s+$/, "");
+    if (/^\s*(```|~~~)/.test(line)) { flush(); inFence = !inFence; continue; }
+    if (inFence) continue;
+    if (line.trim() === "") { flush(); continue; }
+    if (/^\s*\|/.test(line)) { flush(); continue; }
+    const startsBlock = /^(#{1,6}\s|\s*[-*+]\s|\s*\d+\.\s|>\s?|---)/.test(line) || (current.length === 0 && /^ {4,}\S/.test(line));
+    if (startsBlock) flush();
+    if (current.length === 0 && /^ {4,}\S/.test(line)) { continue; } // indented code block line
+    current.push(line.replace(/^\s*(#{1,6}\s|[-*+]\s|\d+\.\s|>\s?)/, "").trim());
+  }
+  flush();
+  return blocks.filter(Boolean);
+}
+
+export function sentences(block) {
+  return block
+    .replace(/`[^`]*`/g, "code")
+    .split(/(?<=[.?!])\s+/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
+export function wordCount(sentence) {
+  return sentence.split(/\s+/).filter((w) => /[A-Za-z0-9]/.test(w)).length;
+}
+
+test(`no sentence in skills/**/*.md is over ${MAX_WORDS} words, outside code and tables`, async () => {
+  const problems = [];
+  for (const file of await skillMarkdownFiles()) {
+    for (const block of proseBlocks(await readFile(file, "utf8"))) {
+      for (const s of sentences(block)) {
+        const n = wordCount(s);
+        if (n > MAX_WORDS) problems.push(`${file}: ${n} words: "${s.slice(0, 90)}…"`);
+      }
+    }
+  }
+  assert.deepEqual(problems, [], `sentences over ${MAX_WORDS} words:\n${problems.join("\n")}`);
+});
+
+test("skills/**/*.md use none of the banned words", async () => {
+  const problems = [];
+  const patterns = BANNED.map((w) => [w, new RegExp(`\\b${w.replace(/ /g, "\\s+")}\\b`, "i")]);
+  for (const file of await skillMarkdownFiles()) {
+    const prose = proseBlocks(await readFile(file, "utf8")).join("\n");
+    for (const [word, re] of patterns) if (re.test(prose)) problems.push(`${file}: "${word}"`);
+  }
+  assert.deepEqual(problems, [], `banned words found:\n${problems.join("\n")}`);
+});
+```
+
+- [ ] **Step 3: Run it, expect failure** on today's files: `node --test test/style.test.mjs` — the sentence-length test fails (many sentences in `verification-loop.md` and `SKILL.md` are over 30 words).
+- [ ] **Step 4: Commit** `test(style): plain-language rules in STYLE.md and a sentence-length/banned-word test (SIG-1253)`.
+
+### Task R2-2: Structure tests for the new layout (fail first) and CI guard
+
+**Files:** Modify `test/skill-structure.test.mjs`, `test/generate-manifests.test.mjs`, `.github/workflows/test.yml`.
+
+- [ ] **Step 1: Rewrite `test/skill-structure.test.mjs`** to assert: `skills/signatureapi-architecture/SKILL.md` exists with `name: signatureapi-architecture`; `skills/signatureapi-architecture/references/product-shapes.md` exists and is linked from that SKILL.md's References list; the architecture SKILL.md has, in order, headings matching `/^## Purpose/`, `/^## Explore and infer/`, `/^## Decision matrix/`, `/^## Infer or ask/`, `/^## Write the design document/`, `/^## Red flags/`, and names `docs/signatureapi-integration.md`; the integrate SKILL.md has `/^## Start from the design/m` before Orient and Build, has no `/^## Intake/m`, names `signatureapi-architecture` and `docs/signatureapi-integration.md`, and no longer lists `product-shapes.md`; every `references/*.md` in each of the three skills is listed in its own SKILL.md References list.
+- [ ] **Step 2: `test/generate-manifests.test.mjs`**: expected names become `["signatureapi-architecture", "signatureapi-diagnose", "signatureapi-integrate"]`.
+- [ ] **Step 3: `.github/workflows/test.yml`**: `npm ci` only in skill dirs that have a `package-lock.json` (the architecture skill has no scripts and no dependencies).
+- [ ] **Step 4: Run** `node --test test/skill-structure.test.mjs test/generate-manifests.test.mjs` — expect failures (skill missing).
+- [ ] **Step 5: Commit** `test(skills): pin the three-skill layout and the design-document gate (SIG-1253)`.
+
+### Task R2-3: The `signatureapi-architecture` skill
+
+**Files:** Create `skills/signatureapi-architecture/SKILL.md`; `git mv skills/signatureapi-integrate/references/product-shapes.md skills/signatureapi-architecture/references/product-shapes.md`.
+
+- [ ] **Step 1: Frontmatter.** `name: signatureapi-architecture`; description in short sentences that triggers on: deciding how to use SignatureAPI in an app; planning or designing a signing flow or signing product; "a platform like DocuSign"; any request to integrate SignatureAPI that is not a narrow change to an existing flow. No `inputs`. State that it needs no API key and writes no application code.
+- [ ] **Step 2: Body, in this order** (headings are what the structure test pins):
+  1. `## Purpose` — three lines: explore the codebase; decide how SignatureAPI will be used; write `docs/signatureapi-integration.md` and get an explicit yes. Writes no application code.
+  2. `## Explore and infer` — list of signals → decision → default: document origin (PDF libraries, upload handlers, object storage, DOCX/templating) → document input path; user authentication and a web frontend → recipient authentication and embedded vs emailed ceremony; tenancy (org/account tables) → `sender` and `topics`; webhook routes, queues, domain events → event handling; where third-party ids are persisted → where the envelope id goes; PDF viewer/canvas components → whether a place-drawing UI is feasible. Link to `../signatureapi-integrate/references/brownfield-placement.md` for the overlapping questions; do not duplicate its text.
+  3. `## Decision matrix` — one table, columns Decision / Options / Signals that pick one / Consequences / Default; rows: document input path; how places are defined (`fixed_positions`, `[[place_key]]` placeholders, DOCX template fields with `data`, user-drawn UI); recipient types and `routing` (`sequential`, `parallel`); authentication per recipient (`email_link`, `email_code`, `custom`, `identity_verification`); ceremony delivery (emailed vs `embeddable_in`) and `redirect_url`; on `envelope.completed` and where deliverables go (`standard` vs `simple`, `delivery_type`); test vs live rollout and who holds the live key; senders and multi-tenant (`sender`, `POST /senders`, `topics`); attestation (`none`, `mx_nom151`, `br_icp_brasil`). Every identifier verified in the live spec (done: see the openapi-explore output recorded in the Deviations below). v2 tools named only as "available from MCP tool surface v2 (SIG-1252)".
+  4. `## Infer or ask` — the three-tier rule verbatim in intent: strong signal → decide, state the decision and the evidence; weak signal → propose the default and ask for confirmation in the same message as the open questions; no signal → ask. Never silently pick a default on a decision that changes the data model, the authentication method, or who receives email. Then the one-message question format with the worked example moved from integrate's Intake.
+  5. `## Write the design document` — fixed path `docs/signatureapi-integration.md`; create `docs/` if missing; if the repo keeps docs elsewhere, still write this file and add a one-line pointer where their docs live. Exact template: title, date, chosen shape (from product-shapes), one section per decision with Decision / Evidence or Answer / Consequence, endpoint sequence, events handled, what is persisted, open items. Present it and get an explicit yes. The file is the contract `signatureapi-integrate` reads.
+  6. `## Red flags` — the table moved from integrate, adapted.
+  7. `## References` — `references/product-shapes.md` plus the integrate references it links to.
+  8. `## Vocabulary` — same definitions as integrate.
+- [ ] **Step 3: product-shapes.md**: header names `signatureapi-architecture`; "Intake" → "the design document"; links to `references/brownfield-placement.md`, `references/webhooks.md`, `references/verification-loop.md` and `scripts/*.mjs` become `../../signatureapi-integrate/...`.
+- [ ] **Step 4: Run** `node --test test/skill-structure.test.mjs` — the architecture assertions pass; integrate assertions still fail.
+- [ ] **Step 5: Commit** `feat(architecture): signatureapi-architecture skill — explore, decide, write the design document (SIG-1253)`.
+
+### Task R2-4: `signatureapi-integrate` starts from the design
+
+**Files:** Modify `skills/signatureapi-integrate/SKILL.md`.
+
+- [ ] **Step 1: Replace `## Intake — classify before you build` (whole section, worked example and red flags included) with:**
+
+```markdown
+## Start from the design
+
+Classify the request first.
+
+- **A narrow change to an existing flow.** One more place, a different
+  authentication method, one more event handled, a bug fixed. Go to Orient
+  and Build.
+- **Anything else.** A new signing flow, a new product surface, "a platform
+  like X". `docs/signatureapi-integration.md` must exist in this repository
+  and the user must have approved it. If it does not exist, stop. Run the
+  `signatureapi-architecture` skill (it ships in the same install) and come
+  back with the approved design. Do not ask the design questions here. Do
+  not build without the file.
+
+Build reads the design file. Take the document input path, the places, the
+recipients, the authentication, the ceremony delivery, the completion
+handling and the rollout from it. Do not guess any of them.
+```
+
+- [ ] **Step 2: Frontmatter description**: triggers on building against an approved design; names `signatureapi-architecture` for the design; keeps the "seemingly simple task" and retrieval-over-memory sentences, in short sentences.
+- [ ] **Step 3: References list**: remove the product-shapes line; add a pointer to `../signatureapi-architecture/references/product-shapes.md` in prose under Start from the design (not in the References list, which the test reads as this skill's own files).
+- [ ] **Step 4: Run** `node --test test/skill-structure.test.mjs` — passes.
+- [ ] **Step 5: Commit** `feat(integrate): require the approved design document instead of running intake (SIG-1253)`.
+
+### Task R2-5: Plain-language pass on all skill markdown
+
+**Files:** Modify every `skills/**/*.md`. Do not touch scripts.
+
+- [ ] **Step 1:** Apply `STYLE.md` to `signatureapi-integrate/SKILL.md`, `references/brownfield-placement.md`, `places.md`, `verification-loop.md`, `webhooks.md`; `signatureapi-diagnose/SKILL.md`, `references/errors.md`; `signatureapi-architecture/SKILL.md`, `references/product-shapes.md`. Keep every identifier, path, command, URL and fact. Where a sentence is cut, keep its instruction.
+- [ ] **Step 2:** Fix the one broken command found while checking identifiers: `node scripts/openapi-explore.mjs schema Place` returns `SCHEMA_NOT_FOUND`; the schema is `Place.PlaceInput` (per-type schemas) and the type list is `Place.Type`. Change the two mentions (SKILL.md and places.md) accordingly; this is a fact correction, recorded in Deviations.
+- [ ] **Step 3:** `node --test test/style.test.mjs test/spec-drift.test.mjs test/scope-headers.test.mjs` — all pass.
+- [ ] **Step 4: Commit** `docs(skills): plain-language pass on every SKILL.md and reference (SIG-1253)`.
+
+### Task R2-6: Manifests, FILEMAP, README, full test run
+
+- [ ] **Step 1:** `npm run manifests && npm run filemap`. Confirm the keywords arrays list three skills and `agent-skills.json` has three entries.
+- [ ] **Step 2:** README: intro no longer says "two skills"; Skills section lists three skills, one plain line each, architecture first; install paragraphs say "the skills" instead of "the two skills".
+- [ ] **Step 3:** `npm test` — all pass; record the count.
+- [ ] **Step 4: Commit** `chore(manifests): regenerate manifests and FILEMAP for the three-skill layout; README lists three skills (SIG-1253)`.
+
+### Task R2-7: Record deviations, push, update PR #3
+
+- [ ] **Step 1:** Append "Deviations recorded during execution (Revision 2)" below this section. Commit `docs(plans): record Revision 2 execution deviations (SIG-1253)`.
+- [ ] **Step 2:** `git push origin feat/SIG-1253-intake-gate`.
+- [ ] **Step 3:** `gh pr edit 3 --title "feat(skills): signatureapi-architecture skill, design-document gate, plain-language style (SIG-1253)" --body-file …` — body: summary of the three parts, test count, the SIG-1252 follow-up checklist kept, ending with the generated-with line and the session link.
+
+## Self-review (Revision 2)
+
+- **Brief coverage:** A (new skill, six body parts, product-shapes moved) — R2-3. B (Start from the design, description, fallbacks and known-gaps kept) — R2-4. C (STYLE.md, pass on all three skills, style test) — R2-1, R2-5. D (manifests, filemap, structure test, allowlist kept, npm test count, plan Revision 2) — R2-2, R2-6, R2-7.
+- **Placeholder scan:** the architecture SKILL.md prose is written in R2-3 from the outline above; the outline names every heading, row and identifier, so no step depends on an undefined name.
+- **Consistency:** the headings pinned by the structure test in R2-2 are the headings listed in R2-3 step 2; the file path `docs/signatureapi-integration.md` is spelled the same in R2-3, R2-4 and the test.
