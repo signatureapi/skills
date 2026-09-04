@@ -636,6 +636,12 @@ EOF
 
 ---
 
+## Deviations recorded during execution
+
+- **Task 2 also regenerates `FILEMAP.md`.** `update-filemap.mjs` embeds each SKILL.md's frontmatter description, so the description change stales FILEMAP as well as `agent-skills.json`. Rule: any SKILL.md frontmatter edit runs both `npm run manifests` and `npm run filemap`.
+- **`whoami` is not in the `mcp_tools_v2` allowlist array.** The spec-drift identifier regex only matches snake_case names containing an underscore, so `whoami` is never checked, and the stale-allowlist test rejects an entry nothing checks. Its reason stays in the `$reasons_mcp_tools_v2` map (skipped by the loader) with a note saying why.
+- Only `agent-skills.json` changed under `npm run manifests`: the per-ecosystem manifests embed a shared plugin `DESCRIPTION` constant, not the skill descriptions.
+
 ## Self-review
 
 - **Spec coverage** (section 6, SIG-1253 items in scope for this PR): Intake section with classification, one-message questions, design-then-yes — Task 2. `references/product-shapes.md` with the three shapes and the tool/endpoint sequences — Task 3. Items deferred by the task brief (delete known-gaps, replace step 3, `watch-events` → `list_events`, `inspect_upload` in places, `get_test_api_key` in setup, diagnose updates) — listed as the PR-body checklist in Task 4, as instructed.
