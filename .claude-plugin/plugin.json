@@ -1,7 +1,6 @@
 {
   "name": "signatureapi",
   "displayName": "SignatureAPI",
-  "version": "1.0.0",
   "description": "SignatureAPI e-signature skills, kept in sync with the hosted MCP server configuration so the same install delivers both.",
   "author": {
     "name": "SignatureAPI",

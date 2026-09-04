@@ -76,11 +76,16 @@ export async function loadSkills(skillsDir = "skills") {
   return skills;
 }
 
-export function buildPluginJson(skills, version) {
+// Claude Code resolves a plugin's version from plugin.json, then the
+// marketplace entry, then the source's git commit SHA. An explicit version
+// pins users: pushes without a bump never reach them and `/plugin update`
+// reports "already at the latest version" (that happened within two days of
+// publishing 1.0.0). Neither Claude manifest carries a version, so every
+// merged commit is an update for anyone who enabled auto-update.
+export function buildPluginJson(skills) {
   return {
     name: "signatureapi",
     displayName: "SignatureAPI",
-    version,
     description: DESCRIPTION,
     author: AUTHOR,
     homepage: HOMEPAGE,
@@ -288,7 +293,7 @@ export async function generate() {
   const skills = await loadSkills();
   const { version } = JSON.parse(await readFile("package.json", "utf8"));
   return {
-    ".claude-plugin/plugin.json": json(buildPluginJson(skills, version)),
+    ".claude-plugin/plugin.json": json(buildPluginJson(skills)),
     ".claude-plugin/marketplace.json": json(buildMarketplaceJson(skills)),
     "agent-skills.json": json(buildAgentSkillsJson(skills)),
     ".mcp.json": json(buildMcpJson()),
