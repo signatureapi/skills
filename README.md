@@ -35,18 +35,18 @@ ecosystem, so the plugin path and the `npx skills` path always carry identical s
 | Ecosystem | Install |
 |---|---|
 | Claude Code | `/plugin marketplace add signatureapi/skills` then `/plugin install signatureapi@signatureapi` |
-| Cursor | Add marketplace `signatureapi/skills`, then install the `signatureapi` plugin (see [Cursor's plugin docs](https://cursor.com/docs/plugins)) |
-| Codex | `codex plugin marketplace add signatureapi/skills` then `codex plugin install signatureapi` |
-| Grok Build | Add marketplace `signatureapi/skills` via `/marketplace`, then install the `signatureapi` plugin |
+| Cursor | **Dashboard → Plugins → Add Marketplace**, import `signatureapi/skills`, then **Customize → Install** the `signatureapi` plugin (see [Cursor's plugin docs](https://cursor.com/docs/plugins)) |
+| Codex | `codex plugin marketplace add signatureapi/skills` then `codex plugin add signatureapi@signatureapi`, then `codex mcp login signatureapi` |
+| Grok Build | `grok plugin marketplace add signatureapi/skills` then `grok plugin install signatureapi --trust` (or `/marketplace` inside Grok Build) |
 | Gemini CLI | `gemini extensions install https://github.com/signatureapi/skills` |
 | Any agent-plugins.org-compatible client | Point it at this repo root — `plugin.json` and `mcp.json` follow the [agent-plugins.org 1.0.0 schema](https://agent-plugins.org/specification) |
 
-Claude Code's plugin install raises no authentication prompt — the MCP server is configured but
-unauthenticated until you first use it, at which point Claude Code reports `! Needs
-authentication` and `claude mcp login` walks you through OAuth. Where the ecosystem lets us say
-so upfront instead, we do: Codex's manifest sets `policy.authentication: "ON_INSTALL"` and
-Gemini's sets `oauth.enabled: true`, so those two prompt for auth at install time rather than
-deferring silently to first use.
+Installing the plugin configures the MCP server; SignatureAPI sign-in is a separate step.
+Claude Code reports `! Needs authentication` until you run `/mcp`. Codex's marketplace manifest
+declares `policy.authentication: "ON_INSTALL"`, so an interactive install may offer the sign-in
+right away; if it does not (a non-interactive install verified on 2026-09-04 did not), run
+`codex mcp login signatureapi`. Gemini CLI's manifest declares `oauth.enabled: true`; run
+`/mcp auth signatureapi` inside Gemini CLI if it does not prompt.
 
 Each plugin install is all-or-nothing: skills and MCP server install and uninstall together.
 There's no flag to take one without the other, and (for Claude Code) `claude mcp remove` refuses
