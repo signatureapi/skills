@@ -11,6 +11,38 @@
     "get_email",
     "search_documentation"
   ],
+  "$comment_mcp_tools_webhooks": "Webhook tools on the hosted MCP server (SIG-1225); referenced by references/product-shapes.md as available when the client lists them.",
+  "mcp_tools_webhooks": [
+    "list_webhooks",
+    "create_webhook",
+    "get_webhook_secret",
+    "test_webhook",
+    "list_webhook_attempts"
+  ],
+  "$comment_mcp_tools_v2": "MCP tool surface v2 (SIG-1252). Not in the OpenAPI spec because they are MCP tools, and not on every server yet; product-shapes.md marks each as (v2) with a REST fallback. Reasons per name:",
+  "$reasons_mcp_tools_v2": {
+    "whoami": "session identity and mode — no REST counterpart an app would call; not listed below because the identifier check only matches snake_case names with an underscore",
+    "get_test_api_key": "credential handoff into the project env file — MCP-only by design",
+    "list_events": "one tool over the three REST event listings plus wait_seconds polling",
+    "get_deliverables": "merges the deliverable list and per-deliverable GET so URLs are fresh",
+    "resend_request": "mirrors the recipient resend operation, internal in today's public spec",
+    "replace_recipient": "mirrors POST /recipients/{id}/replace",
+    "create_ceremony": "mirrors POST /recipients/{id}/ceremonies",
+    "inspect_upload": "mirrors the upload structure endpoint, SDK-only in today's public spec",
+    "update_webhook": "MCP webhooks PATCH — webhooks have no public REST surface"
+  },
+  "mcp_tools_v2": [
+    "get_test_api_key",
+    "list_events",
+    "get_deliverables",
+    "resend_request",
+    "replace_recipient",
+    "create_ceremony",
+    "inspect_upload",
+    "update_webhook"
+  ],
+  "$comment_mcp_tool_inputs": "wait_seconds is a list_events (v2) input, not a REST field.",
+  "mcp_tool_inputs": ["wait_seconds"],
   "mcp_only_fields": ["ceremony_url"],
   "key_prefixes": ["key_test_"]
 }

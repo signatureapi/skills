@@ -12,6 +12,7 @@ Every file in this repo and what it is for.
 - `skills/signatureapi-integrate/package.json` — npm manifest for @signatureapi/signatureapi-integrate (dependencies: yaml)
 - `skills/signatureapi-integrate/references/brownfield-placement.md` — Placing signing in an existing codebase
 - `skills/signatureapi-integrate/references/places.md` — Places
+- `skills/signatureapi-integrate/references/product-shapes.md` — Product shapes
 - `skills/signatureapi-integrate/references/verification-loop.md` — Verifying a ceremony actually happened
 - `skills/signatureapi-integrate/references/webhooks.md` — Webhooks
 - `skills/signatureapi-integrate/scripts/check-setup.mjs` — Part of the SignatureAPI signatureapi-integrate skill. Checks that SIGNATUREAPI_KEY is set, is a test key, and that the API is reachable — the first step of the skill's Build sequence. Test-mode tooling, not production code. Full workflow: SKILL.md.

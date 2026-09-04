@@ -265,6 +265,7 @@ install chromium`.
 - `references/places.md` — how places bind to a document (types come from the spec)
 - `references/webhooks.md` — registering an endpoint and the handler shape
 - `references/brownfield-placement.md` — where signing belongs in an existing codebase
+- `references/product-shapes.md` — the three common product shapes: what the app calls, what you prove it with
 - `references/verification-loop.md` — both verification branches in full
 
 ## Vocabulary
