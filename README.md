@@ -1,8 +1,9 @@
 # SignatureAPI Agent Skills
 
-Agent Skills for [SignatureAPI](https://signatureapi.com), the e-signature API. Two skills that
-let AI coding agents build and troubleshoot e-signature integrations directly from the command
-line: one for building a signing flow, one for diagnosing one that already exists.
+Agent Skills for [SignatureAPI](https://signatureapi.com), the e-signature API. Three skills let
+AI coding agents design, build and troubleshoot e-signature integrations from the command line:
+one decides how an app should use SignatureAPI and writes the design, one builds the signing
+flow from that design, one diagnoses a flow that already exists.
 
 ## Install
 
@@ -22,13 +23,13 @@ based on whether you also want the hosted MCP server (`https://mcp.signatureapi.
 OAuth-authenticated) configured.
 
 **Cross-runtime** (Claude Code, Codex, Cursor, Copilot, Amp, Antigravity, and others) — installs
-the two skills only, no MCP configuration:
+the skills only, no MCP configuration:
 
 ```bash
 npx skills add signatureapi/skills
 ```
 
-**Plugin install** — installs the same two skills *and* configures the hosted MCP server in one
+**Plugin install** — installs the same skills *and* configures the hosted MCP server in one
 step. Every ecosystem below installs from this same repo root — nothing is mirrored per
 ecosystem, so the plugin path and the `npx skills` path always carry identical skill content:
 
@@ -58,12 +59,17 @@ the same file the Claude Code and Grok Build plugins install elsewhere.
 
 ## Skills
 
-- **[signatureapi-integrate](skills/signatureapi-integrate)** — build or change an integration:
-  create an envelope, place signature fields, wire up webhooks, and verify the whole flow end to
-  end against a real test-mode envelope.
-- **[signatureapi-diagnose](skills/signatureapi-diagnose)** — diagnose a misbehaving integration:
-  an envelope stuck in processing, a webhook that never arrived, a recipient who never got the
-  signing email, a missing deliverable, or a validation error on create.
+- **[signatureapi-architecture](skills/signatureapi-architecture)** — decide how your app should
+  use SignatureAPI, and write the design document (`docs/signatureapi-integration.md`) the
+  integrate skill builds from. Needs no API key.
+- **[signatureapi-integrate](skills/signatureapi-integrate)** — build or change an integration
+  from an approved design: create an envelope, place signature fields, wire up webhooks, and
+  verify the flow end to end against a real test-mode envelope.
+- **[signatureapi-diagnose](skills/signatureapi-diagnose)** — diagnose an integration that
+  misbehaves: an envelope stuck in processing, a webhook that never arrived, a recipient who
+  never got the signing email, a missing deliverable, or a validation error on create.
+
+Skills are written in plain language; `STYLE.md` has the rules and `npm test` checks them.
 
 The two surfaces are kept apart on purpose. The code an agent writes into your application calls
 the REST API (`https://api.signatureapi.com/v1`); the MCP server and the bundled scripts are the
@@ -71,7 +77,7 @@ agent's own tools for inspecting and proving the flow while it works, and never 
 dependency of your app. The skills inline concepts and gotchas only — field names, enum values,
 event types and limits are read from the published OpenAPI spec on demand, and a CI test fails
 this repo whenever an identifier a skill mentions stops existing in that spec.
-Each `SKILL.md` also carries a handful of scripts for the parts an agent shouldn't improvise:
+The integrate and diagnose skills also carry a handful of scripts for the parts an agent shouldn't improvise:
 querying the OpenAPI spec instead of reading a 108 KB docs page, minting a test document and
 creating a test envelope, watching for events or receiving webhooks locally, walking a real
 browser through a ceremony, and pulling a verdict for a stuck envelope.
