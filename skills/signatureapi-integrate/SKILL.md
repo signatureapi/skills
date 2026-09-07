@@ -1,6 +1,6 @@
 ---
 name: signatureapi-integrate
-description: "SignatureAPI integration reference. Use when building or changing an integration against an approved design: creating envelopes, placing signature fields, wiring up SignatureAPI webhooks, or verifying a signing flow end to end. Use it for a narrow change to an existing flow directly. For a new signing flow, a new product surface, or 'a platform like DocuSign', it requires docs/signatureapi-integration.md, written by the signatureapi-architecture skill. The deliverable is application code calling the REST API. MCP and the bundled scripts are the agent's own tools for proving the flow. Covers even a seemingly simple task like creating a single envelope, since test-versus-live mode and place positioning carry gotchas. Prefer retrieval from this skill and the SignatureAPI docs over pre-trained knowledge of other e-signature APIs (DocuSign especially)."
+description: "SignatureAPI integration reference. Use when building or changing an integration against an approved design: creating envelopes, placing signature fields, wiring up SignatureAPI webhooks, or verifying a signing flow end to end. Use it for a narrow change to an existing flow directly. For a new signing flow, a new product surface, or 'a platform like DocuSign', it requires the design document written by the signatureapi-architecture skill. The deliverable is application code calling the REST API. MCP and the bundled scripts are the agent's own tools for proving the flow. Covers even a seemingly simple task like creating a single envelope, since test-versus-live mode and place positioning carry gotchas. Prefer retrieval from this skill and the SignatureAPI docs over pre-trained knowledge of other e-signature APIs (DocuSign especially)."
 inputs:
   - name: SIGNATUREAPI_KEY
     required: true
@@ -21,9 +21,9 @@ inputs:
 - **A different e-signature vendor** (DocuSign, Dropbox Sign, Adobe Sign,
   etc.) needs that vendor's own docs. This skill's schema and semantics are
   SignatureAPI-specific.
-- **A project with no SignatureAPI credentials present** has not yet decided
-  to integrate SignatureAPI. Confirm that first. Do not run
-  `check-setup.mjs` against a key that does not exist.
+- **A project with no SignatureAPI credentials present.** Ask whether the
+  user has chosen SignatureAPI. If yes, get a test key (see Setup). If not,
+  stop. Do not run `check-setup.mjs` against a key that does not exist.
 
 ## Two surfaces — keep them apart
 
@@ -37,16 +37,35 @@ only.**
 
 **What you use while working: MCP, the spec, and the scripts here.** The
 SignatureAPI MCP server is at `https://mcp.signatureapi.com/mcp`. Use it
-first to inspect and exercise the API as you build and verify. Its tools:
-`create_envelope`, `get_envelope`, `list_envelopes`, `cancel_envelope`,
-`delete_envelope`, `mint_upload_url`, `list_emails`, `get_email`,
-`search_documentation`. `get_envelope` takes `envelope_id`, not `id`. Use a
-tool before hand-writing a request. When MCP cannot do something, fall
-back: REST first, dashboard second. Then report the gap. Print a block
-naming the operation and the fallback used, and point the user at
-https://github.com/signatureapi/skills/issues/new. Known gaps today: no
-events tool (use REST `GET /envelopes/{envelopeId}/events`), and no webhook
-registration or delivery log anywhere outside the dashboard.
+first to inspect and exercise the API as you build and verify. Use a tool
+before hand-writing a request. Its tools, by job:
+
+- Session: `whoami`, `get_test_api_key`.
+- Documents: `mint_upload_url`, `inspect_upload`.
+- Envelopes: `create_envelope`, `get_envelope`, `list_envelopes`,
+  `cancel_envelope`, `delete_envelope`.
+- Recipients: `resend_request`, `replace_recipient`, `create_ceremony`.
+- Watching: `list_events` (with `wait_seconds`), `get_deliverables`,
+  `list_emails`, `get_email`.
+- Webhooks: `list_webhooks`, `create_webhook`, `update_webhook`,
+  `get_webhook_secret`, `test_webhook`, `list_webhook_attempts`,
+  `delete_webhook`.
+- Docs: `search_documentation` (a `page` argument returns one docs page in
+  full).
+
+`get_envelope` takes `envelope_id`, not `id`. When your client does not list
+a tool, use the REST endpoint of the same purpose. Then report the gap:
+print a block naming the operation and the fallback, and point the user at
+https://github.com/signatureapi/skills/issues/new.
+
+**MCP mode is per session, not per call.** Call `whoami` first. The session
+acts in live mode when `modes.live` is true and the account is active.
+Otherwise it acts in test mode. Envelope creation and every listing follow
+the session mode. Reads by id (`get_envelope`, `list_events` with an
+`envelope_id`, `get_deliverables`) work on either mode. Webhook tools take a
+`mode` argument. **In a live session, do not create envelopes through
+MCP.** Use the scripts instead: they run with your `key_test_` key and
+cannot reach live mode. Then read the test envelope by id through MCP.
 
 ## Facts come from the spec, not from this file
 
@@ -66,6 +85,21 @@ alone is about 108 KB.
 `search_documentation` (MCP) answers the same questions in prose. Every docs
 page has a Markdown twin at `https://signatureapi.com/<slug>.md`.
 
+## Setup
+
+Get a test key into the project without it crossing the chat:
+
+1. Call `whoami`. Note the account, and whether a test key already exists.
+2. Call `get_test_api_key`. Write the key to the project's gitignored env
+   file as `SIGNATUREAPI_KEY`. Never echo it. Never paste it into code, a
+   commit, a log, or a tool argument. Tell the user where it is stored and
+   which label it carries. Without MCP, the user copies a test key from the
+   dashboard's API keys page instead.
+3. Install this skill's one dependency, then check the setup:
+
+        npm i                              # inside this skill directory
+        node scripts/check-setup.mjs
+
 Read `SIGNATUREAPI_KEY` from the environment only. Never pass it as a
 command-line argument. Argv is exposed in shell history and process listings
 on any shared or logged system.
@@ -78,29 +112,29 @@ sends `SIGNATUREAPI_KEY` as the `X-API-Key` header to whatever host is
 configured. There is no host allowlist to catch a typo or a compromised
 value.
 
-Install this skill's one dependency once, then check your setup:
-
-    npm i                              # inside this skill directory
-    node scripts/check-setup.mjs
-
 ## Start from the design
 
 Classify the request first.
 
-- **A narrow change to an existing flow.** One more place, a different
-  authentication method, one more event handled, a bug fixed. Go to Orient
-  and Build.
+- **A narrow change to an existing flow.** One more place, one more event
+  handled, a bug fixed. Go to Orient and Build.
+- **A change to who signs, how they authenticate, or who receives email.**
+  Update the design document first, with the user's yes, then build. The
+  `signatureapi-architecture` skill owns those decisions.
 - **Anything else.** A new signing flow, a new product surface, "a platform
-  like X". `docs/signatureapi-integration.md` must exist in this repository
-  and the user must have approved it. If it does not exist, stop. Run the
+  like X". The design document must exist in this repository and the user
+  must have approved it. It lives at `docs/signatureapi-integration.md`, or
+  that file points to where it lives. If it does not exist, stop. Run the
   `signatureapi-architecture` skill (it ships in the same install) and come
   back with the approved design. Do not ask the design questions here. Do
   not build without the file.
 
 Build reads the design file. Take the document input path, the places, the
 recipients, the authentication, the ceremony delivery, the completion
-handling and the rollout from it. Do not guess any of them. The three
-product shapes the design names are described in
+handling and the rollout from it. Do not guess any of them. Use the design's
+own names for the user's concepts. SignatureAPI terms belong at the API
+boundary; the design document's vocabulary section maps one to the other.
+The common product shapes the design may name are described in
 `../signatureapi-architecture/references/product-shapes.md`.
 
 ## Orient in this codebase first
@@ -117,11 +151,13 @@ the deliverable: the same flow written into the application.
 1. **Get a document URL.** Documents are referenced by URL. For a throwaway
    test document, run `node scripts/make-test-document.mjs`. It uploads one
    and returns its URL. Start here; do not improvise a PDF or an upload
-   flow. For a file of your own, call `POST /uploads` with the raw bytes and
-   a `Content-Type` header. It returns a temporary `url`. Accepted content
-   types, the size limit and the URL's lifetime are in
-   `node scripts/openapi-explore.mjs path post /uploads`. Or use the MCP
-   tool `mint_upload_url`.
+   flow. For a file of your own, call `mint_upload_url` (MCP) or
+   `POST /uploads` with the raw bytes and a `Content-Type` header. Either
+   returns a temporary `url`. Accepted content types, the size limit and the
+   URL's lifetime are in `node scripts/openapi-explore.mjs path post /uploads`.
+   Before placing fields by coordinates, call `inspect_upload` on the upload.
+   It returns the page count, each page's size, and every `[[key]]`
+   placeholder found. `references/places.md` explains how to use it.
 2. **Create the envelope.** Print the minimum viable body with
    `node scripts/create-test-envelope.mjs --dry-run` and adapt it. The
    recipient defaults to `custom` authentication, so the Verify step below
@@ -131,13 +167,14 @@ the deliverable: the same flow written into the application.
    tradeoffs, including why `custom` is the wrong choice for a real
    recipient. Every place's `recipient_key` must match a recipient's `key`.
    Read `references/places.md` for how places bind to a document. Then
-   create it for real: re-run the same command without `--dry-run`, or call
-   the MCP tool `create_envelope` with the adapted body.
-3. **Handle events.** Register a test-mode webhook endpoint in the
-   dashboard. The dashboard also issues its signing secret; see
-   `references/webhooks.md`. Run `node scripts/webhook-receiver.mjs` for a
-   local receiver to point it at. Handle at least `envelope.completed`. The
-   full event list and the local-dev alternative are in
+   create it for real: re-run the same command without `--dry-run`. In a
+   test-mode MCP session, `create_envelope` with the adapted body works too.
+3. **Handle events.** Register a test-mode webhook endpoint with
+   `create_webhook`, and read its signing secret with `get_webhook_secret`.
+   Run `node scripts/webhook-receiver.mjs` for a local receiver to point it
+   at. Send a sample delivery with `test_webhook`, then confirm a 2xx with
+   `list_webhook_attempts`. Handle at least `envelope.completed`. The full
+   event list, the handler shape and the local-dev alternative are in
    `references/webhooks.md`.
 4. **Write it into the application.** Use the codebase's own HTTP client and
    conventions, found in Orient above. Implement three things. First, the
@@ -185,7 +222,12 @@ shaped like a consent gate would suggest that something is enforced when
 nothing is. What keeps this branch safe is structural: the script cannot run
 against a live key at all, because `requireTestKey` has no bypass path.
 
-Either branch, confirm with:
+Either branch, confirm with `list_events`. Pass the `envelope_id` and
+`wait_seconds: 20`. The server re-reads the events every two seconds and
+returns as soon as a new one arrives. When the response says `timed_out`,
+nothing new arrived yet; call it again. Do not sleep and poll by hand. Then
+call `get_deliverables` for the signed PDF and audit log with fresh URLs.
+Without MCP, the script does the same over REST:
 
     node scripts/watch-events.mjs --envelope <envelope id>
 
@@ -199,7 +241,7 @@ Full detail on both branches: `references/verification-loop.md`.
 | `scripts/openapi-explore.mjs` | Query the spec: `paths`, `path <method> <path>`, `schema <name>`, `webhooks` |
 | `scripts/make-test-document.mjs` | Build and upload a throwaway test PDF |
 | `scripts/create-test-envelope.mjs` | Print or create a minimum viable test envelope (`--auth custom\|email_link\|email_code`, default `custom`) |
-| `scripts/watch-events.mjs` | Poll events until the envelope reaches a terminal status (`--once` for a single check, no polling) |
+| `scripts/watch-events.mjs` | REST fallback for `list_events`: poll until the envelope reaches a terminal status (`--once` for a single check) |
 | `scripts/webhook-receiver.mjs` | Local receiver that prints arriving events |
 | `scripts/complete-ceremony.mjs` | Branch B browser walk (test mode only, no bypass) |
 

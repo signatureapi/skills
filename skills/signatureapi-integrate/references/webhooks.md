@@ -43,10 +43,18 @@ from the application, or MCP `get_envelope` while you work.
 
 ## Registering an endpoint
 
-Endpoint registration, and the signing secret it issues, exists only in the
-dashboard: `https://dashboard.signatureapi.com/webhooks?mode=test`. There is
-no API or MCP operation for it. This is a real gap. Report it at
-https://github.com/signatureapi/skills/issues/new if you hit it repeatedly.
+Register test-mode endpoints with the MCP webhook tools. `list_webhooks`
+first, to avoid a duplicate. Then `create_webhook` with the URL and the event
+types. `get_webhook_secret` returns the signing secret for the handler.
+`test_webhook` sends a sample delivery. `list_webhook_attempts` shows each
+delivery and its response code, which is how you tell "the event fired"
+apart from "my handler never ran". `update_webhook` changes the URL or the
+event types without recreating the endpoint. Every one of these takes a
+`mode` argument that defaults to test.
+
+Without MCP, the dashboard does the same:
+`https://dashboard.signatureapi.com/webhooks?mode=test`. Endpoint
+registration has no public REST endpoint.
 
 Test and live endpoints are separate. A test-mode envelope never notifies a
 live endpoint, and vice versa.
@@ -60,12 +68,12 @@ options:
   http://localhost:4000`) and register the public URL as a test-mode
   endpoint. It binds to `127.0.0.1` by default, not the LAN-reachable
   `0.0.0.0`. Pass `--host <address>` to bind somewhere else explicitly.
-- Or skip webhooks during development and poll instead:
-  `node scripts/watch-events.mjs --envelope <id>`, or
-  `GET /envelopes/{envelopeId}/events` directly. This is the honest
-  fallback, not a workaround. There is no webhook-delivery log anywhere. So
-  once an endpoint is registered, the events endpoint is also how you tell
-  "my handler never ran" apart from "the event never arrived".
+- Or skip webhooks during development and watch events instead:
+  `list_events` with the `envelope_id` and `wait_seconds`, or
+  `node scripts/watch-events.mjs --envelope <id>` over REST. This is the
+  honest fallback, not a workaround. Once an endpoint is registered,
+  `list_webhook_attempts` shows whether each delivery reached your handler
+  and what it answered.
 
 ## Handler shape
 

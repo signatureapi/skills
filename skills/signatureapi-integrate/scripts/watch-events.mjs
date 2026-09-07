@@ -1,9 +1,9 @@
 #!/usr/bin/env node
-// Part of the SignatureAPI signatureapi-integrate skill. Polls a test-mode
-// envelope's events until it reaches a terminal status, to confirm a
-// ceremony actually completed. Test-mode tooling, not production code.
-// Full workflow: SKILL.md.
-import { ok, fail, gap, requireTestKey } from "./lib/output.mjs";
+// Part of the SignatureAPI signatureapi-integrate skill. REST fallback for
+// the MCP list_events tool: polls a test-mode envelope's events until it
+// reaches a terminal status, to confirm a ceremony actually completed.
+// Test-mode tooling, not production code. Full workflow: SKILL.md.
+import { ok, fail, requireTestKey } from "./lib/output.mjs";
 
 const API = process.env.SIGNATUREAPI_BASE_URL ?? "https://api.signatureapi.com/v1";
 
@@ -53,11 +53,6 @@ if (import.meta.url === `file://${process.argv[1]}`) {
       status: envelope.status ?? null,
       terminal: isTerminal(envelope.status),
       events: events.map((e) => e.type),
-      mcp_gap: gap(
-        "read envelope events",
-        "REST GET /envelopes/{id}/events",
-        "MCP exposes no events tool, so event confirmation cannot be done through MCP.",
-      ),
     });
   }
 
@@ -75,11 +70,6 @@ if (import.meta.url === `file://${process.argv[1]}`) {
         envelope_id: envelopeId,
         status: envelope.status,
         events: seen.map((e) => e.type),
-        mcp_gap: gap(
-          "read envelope events",
-          "REST GET /envelopes/{id}/events",
-          "MCP exposes no events tool, so event confirmation cannot be done through MCP.",
-        ),
       });
     }
     await new Promise((r) => setTimeout(r, 5000));

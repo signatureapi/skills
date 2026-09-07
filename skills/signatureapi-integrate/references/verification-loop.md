@@ -79,7 +79,8 @@ Branch B below for why.
 ## Branch A — hand it to the human
 
 Give the `ceremony_url` to the user. Wait for them to complete the ceremony
-themselves. Then confirm completion with `watch-events.mjs --envelope <id>`.
+themselves. Then confirm completion with `list_events` (`envelope_id` plus
+`wait_seconds`), or `watch-events.mjs --envelope <id>` over REST.
 
 Use this branch whenever a human is available to sign. It needs no browser
 automation.
@@ -167,6 +168,7 @@ accept that risk instead: this script has no code path that can run against
 a live ceremony. Always pass `--envelope`, with or without `--url` alongside
 it.
 
-After it reports `walked: true`, confirm completion with
-`watch-events.mjs --envelope <id>`. That is the same verification step as
-Branch A.
+After it reports `walked: true`, confirm completion with `list_events`
+(`envelope_id` plus `wait_seconds`), or `watch-events.mjs --envelope <id>`
+over REST. That is the same verification step as Branch A. Then
+`get_deliverables` returns the signed PDF and audit log.

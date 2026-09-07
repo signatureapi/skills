@@ -1,48 +1,48 @@
 {
-  "$comment": "Backticked snake_case identifiers that skill markdown may mention even though they do not exist in the published OpenAPI spec. Every entry needs a reason. Anything not listed here and not found in the spec fails test/spec-drift.test.mjs — add an entry only when the identifier genuinely lives outside the spec (an MCP tool, an MCP-only field, a key prefix), never to paper over a spec mismatch.",
-  "mcp_tools": [
-    "create_envelope",
-    "get_envelope",
-    "list_envelopes",
-    "cancel_envelope",
-    "delete_envelope",
-    "mint_upload_url",
-    "list_emails",
-    "get_email",
-    "search_documentation"
-  ],
-  "$comment_mcp_tools_webhooks": "Webhook tools on the hosted MCP server (SIG-1225); referenced by references/product-shapes.md as available when the client lists them.",
-  "mcp_tools_webhooks": [
-    "list_webhooks",
-    "create_webhook",
-    "get_webhook_secret",
-    "test_webhook",
-    "list_webhook_attempts"
-  ],
-  "$comment_mcp_tools_v2": "MCP tool surface v2 (SIG-1252). Not in the OpenAPI spec because they are MCP tools, and not on every server yet; product-shapes.md marks each as (v2) with a REST fallback. Reasons per name:",
-  "$reasons_mcp_tools_v2": {
-    "whoami": "session identity and mode — no REST counterpart an app would call; not listed below because the identifier check only matches snake_case names with an underscore",
-    "get_test_api_key": "credential handoff into the project env file — MCP-only by design",
+  "$comment": "Backticked snake_case identifiers that skill markdown may mention even though they do not exist in the published OpenAPI spec. Every entry needs a reason. Anything not listed here and not found in the spec fails test/spec-drift.test.mjs \u2014 add an entry only when the identifier genuinely lives outside the spec (an MCP tool, an MCP-only field, a key prefix), never to paper over a spec mismatch.",
+  "$comment_mcp_tools": "Tools on the hosted MCP server. Not in the OpenAPI spec because they are MCP tools. whoami is not listed because the identifier check only matches snake_case names with an underscore. Reasons for the ones without a one-to-one REST twin:",
+  "$reasons_mcp_tools": {
+    "get_test_api_key": "credential handoff into the project env file \u2014 MCP-only by design",
     "list_events": "one tool over the three REST event listings plus wait_seconds polling",
     "get_deliverables": "merges the deliverable list and per-deliverable GET so URLs are fresh",
-    "resend_request": "mirrors the recipient resend operation, internal in today's public spec",
-    "replace_recipient": "mirrors POST /recipients/{id}/replace",
-    "create_ceremony": "mirrors POST /recipients/{id}/ceremonies",
-    "inspect_upload": "mirrors the upload structure endpoint, SDK-only in today's public spec",
-    "update_webhook": "MCP webhooks PATCH — webhooks have no public REST surface"
+    "update_webhook": "MCP webhooks PATCH \u2014 webhooks have no public REST surface",
+    "search_documentation": "docs search and page retrieval"
   },
-  "mcp_tools_v2": [
-    "get_test_api_key",
-    "list_events",
-    "get_deliverables",
-    "resend_request",
-    "replace_recipient",
+  "mcp_tools": [
+    "cancel_envelope",
     "create_ceremony",
+    "create_envelope",
+    "create_webhook",
+    "delete_envelope",
+    "delete_webhook",
+    "get_deliverables",
+    "get_email",
+    "get_envelope",
+    "get_test_api_key",
+    "get_webhook_secret",
     "inspect_upload",
+    "list_emails",
+    "list_envelopes",
+    "list_events",
+    "list_webhook_attempts",
+    "list_webhooks",
+    "mint_upload_url",
+    "replace_recipient",
+    "resend_request",
+    "search_documentation",
+    "test_webhook",
     "update_webhook"
   ],
-  "$comment_mcp_tool_inputs": "wait_seconds is a list_events (v2) input, not a REST field.",
-  "mcp_tool_inputs": ["wait_seconds"],
-  "mcp_only_fields": ["ceremony_url"],
-  "key_prefixes": ["key_test_"]
+  "$comment_mcp_tool_inputs": "wait_seconds is a list_events input, not a REST field.",
+  "mcp_tool_inputs": [
+    "wait_seconds"
+  ],
+  "mcp_only_fields": [
+    "ceremony_url",
+    "timed_out"
+  ],
+  "key_prefixes": [
+    "key_test_"
+  ],
+  "$comment_mcp_tool_outputs": "timed_out is a list_events output field, not a REST field."
 }
