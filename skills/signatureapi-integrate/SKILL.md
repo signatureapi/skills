@@ -40,7 +40,7 @@ SignatureAPI MCP server is at `https://mcp.signatureapi.com/mcp`. Use it
 first to inspect and exercise the API as you build and verify. Use a tool
 before hand-writing a request. Its tools, by job:
 
-- Session: `whoami`, `get_test_api_key`.
+- Session: `whoami`.
 - Documents: `mint_upload_url` or `upload_file` (one per host),
   `inspect_upload`.
 - Envelopes: `create_envelope`, `get_envelope`, `list_envelopes`,
@@ -49,8 +49,7 @@ before hand-writing a request. Its tools, by job:
 - Watching: `list_events` (with `wait_seconds`), `get_deliverables`,
   `list_emails`, `get_email`.
 - Webhooks: `list_webhooks`, `create_webhook`, `update_webhook`,
-  `get_webhook_secret`, `test_webhook`, `list_webhook_attempts`,
-  `delete_webhook`.
+  `test_webhook`, `list_webhook_attempts`, `delete_webhook`.
 - Docs: `search_documentation` (a `page` argument returns one docs page in
   full).
 
@@ -113,14 +112,19 @@ page has a Markdown twin at `https://signatureapi.com/<slug>.md`.
 
 ## Setup
 
-Get a test key into the project without it crossing the chat:
+Get a test key into the project without it crossing the chat. No MCP tool
+returns a credential: a tool result lands in the transcript, and the model,
+not a person, decides to read it. The user fetches secrets from the
+dashboard.
 
-1. Call `whoami`. Note the account, and whether a test key already exists.
-2. Call `get_test_api_key`. Write the key to the project's gitignored env
-   file as `SIGNATUREAPI_KEY`. Never echo it. Never paste it into code, a
-   commit, a log, or a tool argument. Tell the user where it is stored and
-   which label it carries. Without MCP, the user copies a test key from the
-   dashboard's API keys page instead.
+1. Call `whoami`. Note the account, and whether a test key already exists
+   (`test_api_key.exists`).
+2. Ask the user to create or copy a test key (`key_test_…`) on the
+   dashboard's API keys page, `https://dashboard.signatureapi.com/settings/api-keys`,
+   and to put it in the project's gitignored env file as `SIGNATUREAPI_KEY`.
+   Say which file and which variable name. Never ask them to paste the key
+   into the chat. If you come across it, never echo it or write it into
+   code, a commit, a log, or a tool argument.
 3. Install this skill's one dependency, then check the setup:
 
         npm i                              # inside this skill directory
@@ -199,8 +203,10 @@ the deliverable: the same flow written into the application.
    create it for real: re-run the same command without `--dry-run`. In a
    test-mode MCP session, `create_envelope` with the adapted body works too.
 3. **Handle events.** Register a test-mode webhook endpoint with
-   `create_webhook`, and read its signing secret with `get_webhook_secret`.
-   Run `node scripts/webhook-receiver.mjs` for a local receiver to point it
+   `create_webhook`. Its signing secret is not returned. The tool names the
+   dashboard page that shows it (`signing_secret_dashboard_url`). Ask the
+   user to copy it into the project's env file as
+   `SIGNATUREAPI_WEBHOOK_SECRET`, the same way as the API key. Run `node scripts/webhook-receiver.mjs` for a local receiver to point it
    at. Send a sample delivery with `test_webhook`, then confirm a 2xx with
    `list_webhook_attempts`. Handle at least `envelope.completed`. The full
    event list, the handler shape and the local-dev alternative are in

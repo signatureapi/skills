@@ -51,9 +51,9 @@ email log)
   recipient, place, ceremony, deliverable, an authentication type, a route).
 - The approval request reads out the plain lines of the design, not the
   technical ones.
-- With MCP: the test key is obtained through `get_test_api_key` and
-  written to the project's env file. In both variants the key never
-  appears in the transcript.
+- The user is asked to put a test key from the dashboard's API keys page
+  into the project's env file, named by file and variable. In both variants
+  the key never appears in the transcript.
 - Application code is written: a call that creates the signing when Start
   engagement runs, a webhook handler on the app's existing inbound-HTTP
   path, and persistence of the signing's id on the engagement.

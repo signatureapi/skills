@@ -45,15 +45,17 @@ from the application, or MCP `get_envelope` while you work.
 
 Register test-mode endpoints with the MCP webhook tools. `list_webhooks`
 first, to avoid a duplicate. Then `create_webhook` with the URL and the event
-types. `get_webhook_secret` returns the signing secret for the handler.
-`test_webhook` sends a sample delivery. `list_webhook_attempts` shows each
+types. The signing secret is never returned by a tool: `create_webhook`
+names the dashboard page where the user reads it
+(`signing_secret_dashboard_url`). Ask them to put it in the project's env
+file as `SIGNATUREAPI_WEBHOOK_SECRET`, not into the chat. `test_webhook` sends a sample delivery. `list_webhook_attempts` shows each
 delivery and its response code, which is how you tell "the event fired"
 apart from "my handler never ran". `update_webhook` changes the URL or the
 event types without recreating the endpoint. Every one of these takes a
 `mode` argument that defaults to test.
 
 Without MCP, the dashboard does the same:
-`https://dashboard.signatureapi.com/webhooks?mode=test`. Endpoint
+`https://dashboard.signatureapi.com/settings/webhooks?mode=test`. Endpoint
 registration has no public REST endpoint.
 
 Test and live endpoints are separate. A test-mode envelope never notifies a

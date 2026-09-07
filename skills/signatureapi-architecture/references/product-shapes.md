@@ -48,9 +48,9 @@ action. The signer is usually outside the app.
 
 **You prove it with**
 
-- `whoami` to confirm account and mode. `get_test_api_key` to put a
-  `key_test_` key into the project's env file without echoing it. Then
-  `../../signatureapi-integrate/scripts/check-setup.mjs`.
+- `whoami` to confirm account and mode. The user puts a `key_test_` key
+  from the dashboard's API keys page into the project's env file; no tool
+  returns one. Then `../../signatureapi-integrate/scripts/check-setup.mjs`.
 - `../../signatureapi-integrate/scripts/make-test-document.mjs`, then
   `create_envelope` (or
   `../../signatureapi-integrate/scripts/create-test-envelope.mjs`).
