@@ -79,9 +79,10 @@ a shell. Check what you actually have, and adapt:
 - **A tool that takes an attached file** (`upload_file`) → use it for
   documents. **A tool that returns an upload URL** (`mint_upload_url`) →
   send the bytes to that URL yourself. Exactly one of the two is listed.
-- **A writable project filesystem** → store the test key in the project's
-  gitignored env file, as Setup describes. **No filesystem** → do not ask
-  for the key and do not print it; every MCP call is already authenticated.
+- **A writable project filesystem** → the user puts the test key in the
+  project's gitignored env file, as Setup describes, and the scripts read
+  it from there. **No filesystem** → do not ask for the key and do not
+  print it; every MCP call is already authenticated.
 - **A shell** → the bundled scripts run. **No shell** → the MCP tools cover
   the same steps: `whoami`, an upload tool, `create_envelope`, the webhook
   tools, `list_events`, `get_deliverables`.
