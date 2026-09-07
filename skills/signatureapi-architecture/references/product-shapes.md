@@ -30,9 +30,10 @@ action. The signer is usually outside the app.
 
 **The application calls**
 
-1. Get a document URL: a public URL it already serves, or `POST /uploads`
-   with the file bytes and a `Content-Type` header. The upload returns a
-   temporary `url`.
+1. Get a document URL. Preferred: the app stores the file in its own
+   storage and passes a signed or public URL to it. Without storage of its
+   own: `POST /uploads` with the file bytes and a `Content-Type` header,
+   which returns a temporary `url`.
 2. `POST /envelopes` with the document, the recipients, the places and
    `metadata`. Recipients default to `email_link` authentication, so
    SignatureAPI emails the signing link. Places are bound by
@@ -151,8 +152,10 @@ means. It has the most code outside SignatureAPI.
 
 **The application calls**
 
-1. `POST /uploads` with the user's file. Keep the returned upload id and
-   `url`. Read the upload's structure with `GET /uploads/{uploadId}/structure`:
+1. `POST /uploads` with the user's file. This shape is the exception to
+   the app-storage preference, because the structure read needs an upload
+   id. Keep the returned upload id and `url`, and keep the app's own copy
+   too. Read the upload's structure with `GET /uploads/{uploadId}/structure`:
    page count, page sizes, any placeholders found. The field-placement UI
    needs it to render pages at the right aspect ratio and to convert screen
    coordinates to PDF points, origin top-left.

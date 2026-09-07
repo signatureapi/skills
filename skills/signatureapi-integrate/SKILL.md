@@ -184,11 +184,13 @@ the deliverable: the same flow written into the application.
 1. **Get a document URL.** Documents are referenced by URL. For a throwaway
    test document, run `node scripts/make-test-document.mjs`. It uploads one
    and returns its URL. Start here; do not improvise a PDF or an upload
-   flow. For a file of your own, use whichever upload tool your client
-   lists. `upload_file` takes the file; `mint_upload_url` returns a URL to
-   send the bytes to. Or call `POST /uploads` with the raw bytes and a
-   `Content-Type` header. Each returns a temporary `url`. Accepted content types, the size limit and the
-   URL's lifetime are in `node scripts/openapi-explore.mjs path post /uploads`.
+   flow. In the application, the preferred source is a signed or public
+   URL to a file in the app's own storage; the design says which. While
+   you work, use whichever upload tool your client lists. `upload_file`
+   takes the file; `mint_upload_url` returns a URL to send the bytes to. Or
+   call `POST /uploads` with the raw bytes and a `Content-Type` header. Each
+   returns a temporary `url`. Accepted content types, the size limit and
+   the URL's lifetime are in `node scripts/openapi-explore.mjs path post /uploads`.
    Before placing fields by coordinates, call `inspect_upload` on the upload.
    It returns the page count, each page's size, and every `[[key]]`
    placeholder found. `references/places.md` explains how to use it.

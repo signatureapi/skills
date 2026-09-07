@@ -16,12 +16,17 @@ data. Otherwise decide from the code and state the decision.
 
 ## Where does the document come from?
 
-- "Your app makes it" → the app generates the file and uploads it with
-  `POST /uploads`, then passes the returned `url`.
-- "Someone uploads a file" → the app forwards the user's file through
-  `POST /uploads`.
-- "A Word template we fill in" → `format: docx` with `data`.
-- "It is already online at a link" → the app passes its own public URL.
+- "Your app makes it" → the app generates the file, stores it in its own
+  storage, and passes a signed or public URL to that copy. Preferred: the
+  app keeps its own record of the file.
+- "Someone uploads a file" → the app stores the user's file in its own
+  storage and passes a signed or public URL. Same preference.
+- "A Word template we fill in" → `format: docx` with `data`, from a URL the
+  app hosts.
+- "It is already online at a link" → the app passes that URL.
+- Only when the app has no storage of its own, or needs the page structure
+  read before placing fields: `POST /uploads` with the bytes, then the
+  returned temporary `url`.
 
 Usually decided from the code. Ask only when the code shows no document
 source.

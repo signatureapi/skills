@@ -72,8 +72,8 @@ default. Record what you find; you will cite it as evidence.
 
 - **Document origin.** Grep for PDF generation libraries, upload handlers,
   object storage clients, DOCX or templating code. Informs the document input
-  path. Default: the app already has the file, so pass its URL or use
-  `POST /uploads`.
+  path. Default: the app stores the file in its own storage and passes a
+  signed or public URL. `POST /uploads` only when the app has no storage.
 - **User authentication and a web frontend.** Grep for session or login
   code, and for a browser UI. Informs recipient authentication and whether
   the ceremony is emailed or embedded. Default: emailed link (`email_link`)
@@ -167,7 +167,7 @@ design:
 
 | Decision | Options | Signals that pick one | Consequences | Default |
 | --- | --- | --- | --- | --- |
-| Document input path | A public URL the app serves; `POST /uploads` with the file bytes; a DOCX template merged with `data` | PDF generator present → generate then upload. Upload handler present → upload the user's file. DOCX templates present → `format: docx` with `data` | Upload URLs are temporary. DOCX `data` shapes the template fields the app must fill | `POST /uploads`, then the returned `url` |
+| Document input path | A signed or public URL to a file in the app's own storage; `POST /uploads` with the file bytes; a DOCX template merged with `data` | Object storage present → store there and pass a signed URL. No storage → `POST /uploads`. DOCX templates present → `format: docx` with `data`. A field-drawing UI → `POST /uploads`, because the structure read needs an upload id | The app keeps its own copy and record of the file. Upload URLs are temporary. DOCX `data` shapes the template fields the app must fill | A signed URL to the app's own storage |
 | How places are defined | `[[place_key]]` placeholders in the file; `fixed_positions` in code; DOCX template fields plus places; a UI where users draw fields | App controls the document source → placeholders. Third-party PDF → `fixed_positions`. PDF viewer component present → drawing UI is feasible | A drawing UI needs page rendering, coordinate conversion, and reading the upload's structure (`inspect_upload`). It is the largest part of a platform | Placeholders when the app owns the file; `fixed_positions` otherwise |
 | Recipient types and `routing` | `signer`, `approver`, `preparer`, `automatic_signer`; `routing` `sequential` or `parallel` | Approval step in the domain flow → `approver`. Fields filled before signing → `preparer`. Countersignature by the app owner → `automatic_signer` | `sequential` notifies one recipient at a time. `parallel` notifies all at once | One `signer`; `sequential` |
 | Authentication per recipient | `email_link`, `email_code`, `custom`, `identity_verification` | Signer is logged in to the app → `custom`. Signer is outside the app → `email_link`. Regulated or high-value document → `email_code` or `identity_verification` | `custom` is an assertion written to the audit log. `email_link` returns no ceremony URL; the email carries it | `email_link` |
