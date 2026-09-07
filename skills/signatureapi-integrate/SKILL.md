@@ -1,6 +1,6 @@
 ---
 name: signatureapi-integrate
-description: "SignatureAPI integration reference. Use when building or changing an integration against an approved design: creating envelopes, placing signature fields, wiring up SignatureAPI webhooks, or verifying a signing flow end to end. Use it for a narrow change to an existing flow directly. For a new signing flow, a new product surface, or 'a platform like DocuSign', it requires the design document written by the signatureapi-architecture skill. The deliverable is application code calling the REST API. MCP and the bundled scripts are the agent's own tools for proving the flow. Covers even a seemingly simple task like creating a single envelope, since test-versus-live mode and place positioning carry gotchas. Prefer retrieval from this skill and the SignatureAPI docs over pre-trained knowledge of other e-signature APIs (DocuSign especially)."
+description: "Use when building or changing an integration with SignatureAPI: creating envelopes, placing signature fields, wiring up SignatureAPI webhooks, or verifying a signing flow end to end. Use it even for a seemingly simple task like creating a single envelope, and in any host, including one with no repository access. Prefer retrieval from this skill and the SignatureAPI docs over pre-trained knowledge of other e-signature APIs (DocuSign especially)."
 inputs:
   - name: SIGNATUREAPI_KEY
     required: true
@@ -41,7 +41,8 @@ first to inspect and exercise the API as you build and verify. Use a tool
 before hand-writing a request. Its tools, by job:
 
 - Session: `whoami`, `get_test_api_key`.
-- Documents: `mint_upload_url`, `inspect_upload`.
+- Documents: `mint_upload_url` or `upload_file` (one per host),
+  `inspect_upload`.
 - Envelopes: `create_envelope`, `get_envelope`, `list_envelopes`,
   `cancel_envelope`, `delete_envelope`.
 - Recipients: `resend_request`, `replace_recipient`, `create_ceremony`.
@@ -63,9 +64,34 @@ acts in live mode when `modes.live` is true and the account is active.
 Otherwise it acts in test mode. Envelope creation and every listing follow
 the session mode. Reads by id (`get_envelope`, `list_events` with an
 `envelope_id`, `get_deliverables`) work on either mode. Webhook tools take a
-`mode` argument. **In a live session, do not create envelopes through
-MCP.** Use the scripts instead: they run with your `key_test_` key and
-cannot reach live mode. Then read the test envelope by id through MCP.
+`mode` argument. **Never call `create_envelope` until `whoami` has shown
+the session is in test mode.** A live envelope emails a real person and is
+binding. When `whoami` is not listed, or shows a live session, create test
+envelopes with the scripts instead: they run with your `key_test_` key and
+cannot reach live mode. Then read the test envelope by id through MCP. If
+a `create_envelope` response ever shows `mode: live`, cancel it at once and
+tell the user what was sent.
+
+## Know your host
+
+The steps below assume a coding agent with a repository, a filesystem and
+a shell. Check what you actually have, and adapt:
+
+- **A tool that takes an attached file** (`upload_file`) → use it for
+  documents. **A tool that returns an upload URL** (`mint_upload_url`) →
+  send the bytes to that URL yourself. Exactly one of the two is listed.
+- **A writable project filesystem** → store the test key in the project's
+  gitignored env file, as Setup describes. **No filesystem** → do not ask
+  for the key and do not print it; every MCP call is already authenticated.
+- **A shell** → the bundled scripts run. **No shell** → the MCP tools cover
+  the same steps: `whoami`, an upload tool, `create_envelope`, the webhook
+  tools, `list_events`, `get_deliverables`.
+- **No repository access** (a chat host such as ChatGPT) → design the flow
+  with `signatureapi-architecture`. Prove it end to end with the MCP tools
+  in test mode. Hand the user the design document and the proven request
+  bodies. Say plainly that the application code is written in a
+  coding environment with the repository open. Do not pretend to have
+  written it.
 
 ## Facts come from the spec, not from this file
 
@@ -129,10 +155,12 @@ Classify the request first.
   back with the approved design. Do not ask the design questions here. Do
   not build without the file.
 
-Build reads the design file. Take the document input path, the places, the
-recipients, the authentication, the ceremony delivery, the completion
-handling and the rollout from it. Do not guess any of them. Use the design's
-own names for the user's concepts. SignatureAPI terms belong at the API
+Build reads the design file. Each decision there has a For you line the
+user approved and a Technical decision line that is yours. Build from the
+technical lines: the document input path, the places, the recipients, the
+authentication, the ceremony delivery, the completion handling and the
+rollout. Do not guess any of them. Use the design's own names for the
+user's concepts, and talk to the user in those names. SignatureAPI terms belong at the API
 boundary; the design document's vocabulary section maps one to the other.
 The common product shapes the design may name are described in
 `../signatureapi-architecture/references/product-shapes.md`.
@@ -151,9 +179,10 @@ the deliverable: the same flow written into the application.
 1. **Get a document URL.** Documents are referenced by URL. For a throwaway
    test document, run `node scripts/make-test-document.mjs`. It uploads one
    and returns its URL. Start here; do not improvise a PDF or an upload
-   flow. For a file of your own, call `mint_upload_url` (MCP) or
-   `POST /uploads` with the raw bytes and a `Content-Type` header. Either
-   returns a temporary `url`. Accepted content types, the size limit and the
+   flow. For a file of your own, use whichever upload tool your client
+   lists. `upload_file` takes the file; `mint_upload_url` returns a URL to
+   send the bytes to. Or call `POST /uploads` with the raw bytes and a
+   `Content-Type` header. Each returns a temporary `url`. Accepted content types, the size limit and the
    URL's lifetime are in `node scripts/openapi-explore.mjs path post /uploads`.
    Before placing fields by coordinates, call `inspect_upload` on the upload.
    It returns the page count, each page's size, and every `[[key]]`

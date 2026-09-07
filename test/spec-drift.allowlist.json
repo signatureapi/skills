@@ -6,7 +6,8 @@
     "list_events": "one tool over the three REST event listings plus wait_seconds polling",
     "get_deliverables": "merges the deliverable list and per-deliverable GET so URLs are fresh",
     "update_webhook": "MCP webhooks PATCH \u2014 webhooks have no public REST surface",
-    "search_documentation": "docs search and page retrieval"
+    "search_documentation": "docs search and page retrieval",
+    "upload_file": "attached-file upload on hosts that pass files to tools; mint_upload_url elsewhere"
   },
   "mcp_tools": [
     "cancel_envelope",
@@ -31,7 +32,8 @@
     "resend_request",
     "search_documentation",
     "test_webhook",
-    "update_webhook"
+    "update_webhook",
+    "upload_file"
   ],
   "$comment_mcp_tool_inputs": "wait_seconds is a list_events input, not a REST field.",
   "mcp_tool_inputs": [

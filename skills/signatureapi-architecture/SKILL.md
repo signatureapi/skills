@@ -1,6 +1,6 @@
 ---
 name: signatureapi-architecture
-description: "Decide how an application should use SignatureAPI, and write the design document. Use when someone asks how to use SignatureAPI in their app, plans or designs a signing flow or a signing product, or asks for 'a platform like DocuSign'. Also use for any request to integrate SignatureAPI that is not a narrow change to an existing flow. Needs no API key: it asks the user what they want, reads the codebase, and settles the decisions together. It writes docs/signatureapi-integration.md and no application code. Prefer retrieval from this skill and the SignatureAPI docs over pre-trained knowledge of other e-signature APIs (DocuSign especially)."
+description: "Use when someone asks how to use SignatureAPI in their app, or plans or designs a signing flow or a signing product. Use when someone asks for 'a platform like DocuSign'. Use for any request to add SignatureAPI that is not a narrow change to an existing flow. Use it before any application code exists for the flow, and even when the user knows no SignatureAPI terms. Needs no API key. Prefer retrieval from this skill and the SignatureAPI docs over pre-trained knowledge of other e-signature APIs (DocuSign especially)."
 ---
 
 # Design a SignatureAPI integration
@@ -31,6 +31,13 @@ deliverable) only when discussing the API boundary. Document the mapping
 between the two in the design document instead of renaming the user's
 concepts. Do the same with the user's own code: their models keep their
 names.
+
+The user never has to learn a SignatureAPI term to answer you. Every
+question goes out in plain words; `references/plain-language-questions.md`
+gives the plain form of each decision and the answers' technical meaning.
+Two facts shape what people experience, so tell the user plainly. Test
+mode sends no real email. A signer who is not logged in to the app is
+reached by email.
 
 ## Understand the experience first
 
@@ -114,9 +121,16 @@ Apply one rule to every decision:
 - **Weak signal.** Propose the default. Ask the user to confirm it.
 - **No signal.** Ask.
 
-Never silently pick a default on a decision that changes the data model, the
-authentication method, or who receives email. Ask, even when you could infer
-it.
+Never silently pick a default on a decision that changes what people
+experience, the security of the signing, its legal standing, its cost, or
+who owns the data. Ask, even when you could infer it. Everything else is
+yours to decide from the code; state it, do not ask it.
+
+Ask every question in the user's terms, with the answers in plain words.
+Take the wording from `references/plain-language-questions.md`. "How does a
+signer prove it is them: the emailed link, an emailed code, an ID check, or
+they are already logged in?" is a question. "Which authentication type?"
+is not.
 
 Ask in rounds, not in one questionnaire. Group the questions that depend on
 each other: the document and its fields; the signers and how they
@@ -136,13 +150,15 @@ decisions have a strong signal or a confirmed default.
 >
 > 1. Does your app generate the order form, or do account managers upload
 >    their own files? I propose generated.
-> 2. Where do the signature fields go: markers written into the generated
->    PDF (my proposal), or positions set in code?
+> 2. Where should the signature boxes go: marked inside the generated
+>    order form where they belong (my proposal), or at fixed spots you set
+>    once?
 
 ## Decision matrix
 
-The API-facing decisions, one row each. Every identifier below is in the
-published spec. Check any you are unsure of before you write it into the
+The API-facing decisions, one row each. This table is for you; the user
+sees the plain form in `references/plain-language-questions.md`. Every
+identifier below is in the published spec. Check any you are unsure of before you write it into the
 design:
 
     node ../signatureapi-integrate/scripts/openapi-explore.mjs schema Envelope.EnvelopeInput
@@ -188,6 +204,14 @@ is missing.
 Use this template. Keep the headings. Fill every section that applies; delete
 a section only when you say why in Open items.
 
+Each decision has two lines the user reads differently. **For you** is the
+decision in the user's words, the line they approve. **Technical decision**
+is the SignatureAPI mapping, yours to choose. The user approves The
+experience section and every For you line. They do not approve the
+technical lines. Raise a technical choice with them separately only when it
+changes what people experience, the security of the signing, its legal
+standing, its cost, or who owns the data.
+
 ```markdown
 # <the user's name for this feature> — SignatureAPI integration design
 
@@ -212,48 +236,57 @@ Departures from it: <one line each, or "none">
 
 ## Decisions
 
-### Document input path
-- Decision:
+### Where the document comes from
+- For you: <plain sentence, e.g. "Ledgerly makes the letter itself">
+- Technical decision:
 - Evidence or answer:
 - Consequence:
 
-### Places
-- Decision:
+### Where the signature and other fields go
+- For you: <plain sentence>
+- Technical decision:
 - Evidence or answer:
 - Consequence:
 
-### Recipients and routing
-- Decision:
+### Who takes part, and in what order
+- For you: <plain sentence>
+- Technical decision:
 - Evidence or answer:
 - Consequence:
 
-### Authentication per recipient
-- Decision:
+### How a signer proves it is them
+- For you: <plain sentence, one per kind of signer>
+- Technical decision:
 - Evidence or answer:
 - Consequence:
 
-### Ceremony delivery and return
-- Decision:
+### Where they sign, and where they land afterwards
+- For you: <plain sentence>
+- Technical decision:
 - Evidence or answer:
 - Consequence:
 
-### On envelope.completed and deliverables
-- Decision:
+### What happens when everyone has signed
+- For you: <plain sentence: where the signed file goes, who gets a copy by email>
+- Technical decision:
 - Evidence or answer:
 - Consequence:
 
-### Rollout
-- Decision:
+### Trying it safely, then going live
+- For you: <plain sentence: test mode sends no real email; who holds the live key>
+- Technical decision:
 - Evidence or answer:
 - Consequence:
 
-### Senders and multi-tenant
-- Decision:
+### Whose name is on the email
+- For you: <plain sentence>
+- Technical decision:
 - Evidence or answer:
 - Consequence:
 
-### Attestation
-- Decision:
+### Legal timestamp for Mexico or Brazil
+- For you: <plain sentence, or "not needed">
+- Technical decision:
 - Evidence or answer:
 - Consequence:
 
@@ -281,8 +314,9 @@ observability; accessibility, mobile, localization, branding>
 - <anything still unanswered>
 ```
 
-Present the document to the user. Ask for an explicit yes. Set `Status:
-approved` only after the user says yes. The file is the contract
+Present the document to the user. Ask for an explicit yes on The
+experience section and the For you lines; read them out, not the technical
+lines. Set `Status: approved` only after the user says yes. The file is the contract
 `signatureapi-integrate` reads. Do not start building.
 
 ## Red flags
@@ -293,6 +327,8 @@ approved` only after the user says yes. The file is the contract
 | "This is obvious, I'll skip the document." | The envelope call is the smallest part. Document source, place definition and the completion handler are where a wrong guess costs days. Write the document. |
 | "They said 'like X', so I'll copy X's data model." | X's concepts (templates, envelopes-as-drafts, tabs) are not SignatureAPI's. Map the user's needs onto this API's objects. |
 | "I'll rename their 'contract' to 'envelope'." | Their word stays. The mapping goes in the Vocabulary table. |
+| "I'll ask which authentication type they want." | Ask how a signer proves it is them, in plain words, with the options spelled out. The type is your mapping. |
+| "They need to approve the technical decisions." | They approve what people will experience. The technical lines are yours; raise one only when it changes experience, security, legal standing, cost or data ownership. |
 | "I'll ask everything in one message to save round trips." | Twelve decisions in one message is a form, and forms go unanswered. Four questions, grouped, then the next group. |
 | "I'll ask one question at a time." | Related questions go together. A signer question needs its authentication question next to it. |
 | "It's one of the three shapes." | The shapes are starting points. Name the closest one and the departures. A hybrid or a custom flow is a valid answer. |
@@ -304,6 +340,7 @@ approved` only after the user says yes. The file is the contract
 ## References
 
 - `references/product-shapes.md` — three common starting points: what the app calls, what you prove it with
+- `references/plain-language-questions.md` — each decision as a plain question, with the technical meaning of each answer
 - `references/coverage-checklist.md` — the product-design areas beyond API configuration
 - `../signatureapi-integrate/references/brownfield-placement.md` — where signing belongs in an existing codebase
 - `../signatureapi-integrate/references/verification-loop.md` — why `custom` authentication is only for signers the app verified
