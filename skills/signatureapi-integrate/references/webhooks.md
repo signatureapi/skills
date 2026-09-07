@@ -44,7 +44,7 @@ MCP `get_envelope` while you work) if you need more than the id.
 ## Registering an endpoint
 
 Endpoint registration — and the signing secret it issues — exists only in the
-dashboard: `https://dashboard.signatureapi.com/webhooks?mode=test`. There is no
+dashboard: `https://dashboard.signatureapi.com/settings/webhooks?mode=test`. There is no
 API or MCP operation for it. This is a real gap, worth reporting at
 https://github.com/signatureapi/skills/issues/new if you hit it repeatedly.
 
