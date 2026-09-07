@@ -6,6 +6,9 @@
 
 **Rubric**
 
+- No question to the user contains a SignatureAPI identifier: envelope,
+  recipient, place, ceremony, deliverable, an authentication type, a route.
+  The plain form from `references/plain-language-questions.md` is used.
 - Does not write application code.
 - Routes to `signatureapi-architecture`, or applies it directly.
 - Asks what the user wants people to experience before proposing a data

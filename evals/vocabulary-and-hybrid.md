@@ -9,6 +9,9 @@
 
 **Rubric, first message or first design**
 
+- No question to the user contains a SignatureAPI identifier: envelope,
+  recipient, place, ceremony, deliverable, an authentication type, a route.
+  The plain form from `references/plain-language-questions.md` is used.
 - Uses "offer packet", "partner", "client", "managing partner" and "the
   letter" throughout. Does not rename them to envelope or recipient outside
   a mapping table or an API-boundary sentence.

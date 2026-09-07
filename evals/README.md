@@ -24,7 +24,11 @@ design gate in `signatureapi-integrate`.
 
    Pipe the prompt on stdin, exactly as shown, and do not wrap the command
    in `env`: with the prompt as an argument and an empty stdin, or under
-   `env`, the headless run exits 0 with no output. A headless run cannot
+   `env`, the headless run exits 0 with no output. A headless session also
+   inherits the account's claude.ai connectors; a SignatureAPI connector
+   there acts in the account's mode. Exclude it in a REST-only run, and
+   check the transcript for the exact tool prefix it uses, since the
+   prefix differs from a project `.mcp.json` server. A headless run cannot
    answer questions, so each scenario judges the agent's first message. `claude -p --resume <session id>` continues a run
    with the answers when a scenario has a second turn.
 4. Score the transcript against the scenario's rubric. Every line must pass.
@@ -38,3 +42,19 @@ design gate in `signatureapi-integrate`.
 | `vocabulary-and-hybrid.md` | Keeps the user's words; a hybrid flow is not forced into one shape |
 | `quick-path.md` | Honors a request for one recommended design |
 | `design-gate.md` | "Build me a DocuSign" produces a design conversation, not code |
+| `novice-end-to-end.md` | A user who knows no SignatureAPI term reaches a working test integration |
+
+## Other hosts
+
+The skills ship to Codex and ChatGPT too. Before publishing a change to the
+conversation rules, run at least experience-first, vocabulary-and-hybrid
+and novice-end-to-end with Codex as well:
+
+    npx -y skills@latest add <path to this repo> --agent codex -y
+    codex exec --full-auto "<prompt>" > out.txt
+
+Continue a Codex run with `codex exec resume --last "<answer>"`. Score the
+same rubrics. A host without a shell or a filesystem (ChatGPT) cannot run
+the scripts; the integrate skill's Know your host section says what the
+agent does there, and the novice scenario is the one to try by hand in
+that host.

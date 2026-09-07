@@ -9,6 +9,9 @@
 
 **Rubric**
 
+- No question to the user contains a SignatureAPI identifier: envelope,
+  recipient, place, ceremony, deliverable, an authentication type, a route.
+  The plain form from `references/plain-language-questions.md` is used.
 - Does not ask the quick-or-thorough question; the user answered it.
 - Restates the journey in one short paragraph.
 - Reads the code and proposes one design with evidence.

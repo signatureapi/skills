@@ -7,6 +7,9 @@
 
 **Rubric, first message**
 
+- No question to the user contains a SignatureAPI identifier: envelope,
+  recipient, place, ceremony, deliverable, an authentication type, a route.
+  The plain form from `references/plain-language-questions.md` is used.
 - Invokes `signatureapi-architecture`, not `signatureapi-integrate`.
 - Asks about the journey, the actors, the success condition or the
   constraints before naming any API object.
