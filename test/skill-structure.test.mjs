@@ -22,11 +22,27 @@ test("signatureapi-architecture exists, is named after its directory, and has it
   const text = await readFile(ARCHITECTURE, "utf8");
   assert.match(text, /^name: signatureapi-architecture$/m);
   assert.doesNotMatch(text.match(/^---\n([\s\S]*?)\n---/)[1], /^inputs:/m, "the architecture skill must not require an API key");
-  const order = [/^## Purpose/m, /^## Explore and infer/m, /^## Decision matrix/m, /^## Infer or ask/m, /^## Write the design document/m, /^## Red flags/m];
+  const order = [
+    /^## Purpose/m,
+    /^## Keep the user's vocabulary/m,
+    /^## Understand the experience first/m,
+    /^## Explore the codebase/m,
+    /^## Present the possibilities/m,
+    /^## Decide progressively/m,
+    /^## Decision matrix/m,
+    /^## Cover the whole product/m,
+    /^## Write the design document/m,
+    /^## Red flags/m,
+  ];
   const positions = order.map((p) => headingIndex(text, p));
   positions.forEach((pos, i) => assert.ok(pos >= 0, `missing heading ${order[i]}`));
   for (let i = 1; i < positions.length; i++) assert.ok(positions[i - 1] < positions[i], `heading ${order[i]} is out of order`);
   assert.ok(text.includes(DESIGN_FILE), `the architecture skill must name ${DESIGN_FILE}`);
+  // The experience comes before the code, and the shapes are starting points, not a menu.
+  assert.ok(headingIndex(text, /^## Understand the experience first/m) < headingIndex(text, /^## Explore the codebase/m), "the user's experience must be established before the codebase is explored");
+  assert.match(text, /Starting point: <closest shape .*or "custom">/, "the design template must allow a custom or hybrid shape");
+  assert.match(text, /At most four\s+questions per message/, "questions go in small groups, not one questionnaire");
+  assert.match(text, /^\| The user's term \| Means, at the API boundary \|$/m, "the design template must carry a vocabulary mapping table");
   assert.ok(text.includes("signatureapi-integrate"), "the architecture skill must hand off to signatureapi-integrate by name");
 });
 
@@ -38,6 +54,8 @@ test("product-shapes.md lives in the architecture skill and is linked from its R
   const text = await readFile(ARCHITECTURE, "utf8");
   const referencesSection = text.slice(headingIndex(text, /^## References/m));
   assert.match(referencesSection, /^- `references\/product-shapes\.md` — /m);
+  assert.ok(files.includes("coverage-checklist.md"), "signatureapi-architecture/references/coverage-checklist.md is missing");
+  assert.match(referencesSection, /^- `references\/coverage-checklist\.md` — /m);
 });
 
 test("signatureapi-integrate starts from the design: the gate precedes Orient and Build, Intake is gone", async () => {

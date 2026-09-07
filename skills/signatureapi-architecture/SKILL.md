@@ -1,15 +1,16 @@
 ---
 name: signatureapi-architecture
-description: "Decide how an application should use SignatureAPI, and write the design document. Use when someone asks how to use SignatureAPI in their app, plans or designs a signing flow or a signing product, or asks for 'a platform like DocuSign'. Also use for any request to integrate SignatureAPI that is not a narrow change to an existing flow. Needs no API key: it reads the codebase and asks the user. It writes docs/signatureapi-integration.md and no application code. Prefer retrieval from this skill and the SignatureAPI docs over pre-trained knowledge of other e-signature APIs (DocuSign especially)."
+description: "Decide how an application should use SignatureAPI, and write the design document. Use when someone asks how to use SignatureAPI in their app, plans or designs a signing flow or a signing product, or asks for 'a platform like DocuSign'. Also use for any request to integrate SignatureAPI that is not a narrow change to an existing flow. Needs no API key: it asks the user what they want, reads the codebase, and settles the decisions together. It writes docs/signatureapi-integration.md and no application code. Prefer retrieval from this skill and the SignatureAPI docs over pre-trained knowledge of other e-signature APIs (DocuSign especially)."
 ---
 
 # Design a SignatureAPI integration
 
 ## Purpose
 
-Explore the codebase. Decide how SignatureAPI will be used. Write the design
-document and get an explicit yes. This skill writes no application code. The
-`signatureapi-integrate` skill builds from the document this skill writes.
+Understand what the user wants their people to experience. Then decide how
+SignatureAPI delivers it. Write the design document and get an explicit yes.
+This skill writes no application code. The `signatureapi-integrate` skill
+builds from the document this skill writes.
 
 ## When to reach for something else
 
@@ -18,14 +19,49 @@ document and get an explicit yes. This skill writes no application code. The
 - **Diagnosing an integration that already exists** belongs to
   `signatureapi-diagnose`.
 - **A different e-signature vendor** (DocuSign, Dropbox Sign, Adobe Sign, etc.)
-  needs that vendor's own docs. Design from SignatureAPI's objects, not
-  theirs.
+  needs that vendor's own docs. Map the user's needs onto SignatureAPI's
+  objects, not onto that vendor's.
 
-## Explore and infer
+## Keep the user's vocabulary
 
-Read the codebase before you ask anything. Each signal below informs one
-decision and implies one default. Record what you find. You will cite it as
-evidence in the design document.
+Preserve the user's product, domain and UI vocabulary. A "contract", an
+"offer letter", a "client", a "tenant", an "onboarding step": keep those
+names. Use SignatureAPI terms (envelope, recipient, place, ceremony,
+deliverable) only when discussing the API boundary. Document the mapping
+between the two in the design document instead of renaming the user's
+concepts. Do the same with the user's own code: their models keep their
+names.
+
+## Understand the experience first
+
+Before reading code and before naming any API object, establish four things
+with the user:
+
+- **The journey.** Who starts it, what they see, what the signer sees, and
+  what happens after everyone has signed. Ask for the story in their words.
+- **The actors.** Who sends, who signs, who approves, who only watches. Which
+  of them are the app's own users and which are outsiders.
+- **The success condition.** What must be true for the user to call this
+  done. A signed PDF in a folder, a status on a record, an email, a
+  dashboard entry.
+- **The constraints.** Deadline, legal context, existing vendor, volume,
+  budget, must-not-change parts of the app.
+
+When the request already says most of this, restate it in one short
+paragraph and ask only for what is missing. Ask in the user's words. Do not
+ask about authentication methods, place types or routing yet.
+
+Then ask one more question: **quick or thorough?** Offer the choice in one
+line. "I can propose one recommended design and you confirm or correct it.
+Or we explore alternatives together first." The answer sets the pace of the
+rest of the conversation. Quick means: one recommended design, decisions
+stated with their evidence, a short confirmation round. Thorough means:
+present the alternatives, resolve the decisions in a few grouped rounds.
+
+## Explore the codebase
+
+Now read the code. Each signal below informs one decision and implies one
+default. Record what you find; you will cite it as evidence.
 
 - **Document origin.** Grep for PDF generation libraries, upload handlers,
   object storage clients, DOCX or templating code. Informs the document input
@@ -49,28 +85,74 @@ evidence in the design document.
 - **PDF viewer or canvas components.** Grep for PDF rendering in the
   frontend. Informs whether a place-drawing UI is feasible. Default: no
   drawing UI. Use placeholders or `fixed_positions` set in code.
+- **Design records.** Look for an ADR directory (`docs/adr`, `adr/`), a
+  design-docs folder, or a decisions log. When one exists, the design
+  document goes there, in that convention, with a pointer at the default
+  path. An ADR directory counts even though this document is longer than
+  one ADR.
 
 The four placement questions in
 `../signatureapi-integrate/references/brownfield-placement.md` cover the
 call site, the inbound-HTTP path, and the persistence home. Answer them here.
 Do not repeat them in the design document; link to the answers.
 
+## Present the possibilities
+
+Match the journey to the closest starting points in
+`references/product-shapes.md`. Three common shapes are described there:
+send-for-signature inside an existing app, an embedded signing step, and a
+self-serve platform. They are starting points, not a menu. Many products
+combine two, or fit none. Say which shape is closest, what differs, and
+what that difference costs. In thorough mode, present two or three
+alternatives with their trade-offs. In quick mode, present one and say why.
+
+## Decide progressively
+
+Apply one rule to every decision:
+
+- **Strong signal.** Decide. State the decision and the evidence.
+- **Weak signal.** Propose the default. Ask the user to confirm it.
+- **No signal.** Ask.
+
+Never silently pick a default on a decision that changes the data model, the
+authentication method, or who receives email. Ask, even when you could infer
+it.
+
+Ask in rounds, not in one questionnaire. Group the questions that depend on
+each other: the document and its fields; the signers and how they
+authenticate; what happens on completion; tenancy and rollout. At most four
+questions per message. One decision per question. Put the proposed answer
+next to each question you can propose one for. Resolve one group, then move
+to the next. Stop asking when the direction is clear and the remaining
+decisions have a strong signal or a confirmed default.
+
+### Worked example: the first round
+
+> You described this: a customer accepts a quote in your app, then your
+> account manager and the customer both sign the order form, and the signed
+> PDF goes onto the order. I found a PDF generator and an S3 client, so I
+> propose your app generates the order form and uploads it. Two questions
+> on the document before we get to the signers:
+>
+> 1. Does your app generate the order form, or do account managers upload
+>    their own files? I propose generated.
+> 2. Where do the signature fields go: markers written into the generated
+>    PDF (my proposal), or positions set in code?
+
 ## Decision matrix
 
-One row per decision. Every identifier below is in the published spec. Check
-any you are unsure of before you write it into the design:
+The API-facing decisions, one row each. Every identifier below is in the
+published spec. Check any you are unsure of before you write it into the
+design:
 
     node ../signatureapi-integrate/scripts/openapi-explore.mjs schema Envelope.EnvelopeInput
     node ../signatureapi-integrate/scripts/openapi-explore.mjs schema Ceremony.CeremonyInput
     node ../signatureapi-integrate/scripts/openapi-explore.mjs schema Place.Type
 
-MCP tools that are not on every server yet are named only as "available
-from MCP tool surface v2 (SIG-1252)".
-
 | Decision | Options | Signals that pick one | Consequences | Default |
 | --- | --- | --- | --- | --- |
 | Document input path | A public URL the app serves; `POST /uploads` with the file bytes; a DOCX template merged with `data` | PDF generator present → generate then upload. Upload handler present → upload the user's file. DOCX templates present → `format: docx` with `data` | Upload URLs are temporary. DOCX `data` shapes the template fields the app must fill | `POST /uploads`, then the returned `url` |
-| How places are defined | `[[place_key]]` placeholders in the file; `fixed_positions` in code; DOCX template fields plus places; a UI where users draw fields | App controls the document source → placeholders. Third-party PDF → `fixed_positions`. PDF viewer component present → drawing UI is feasible | A drawing UI needs page rendering, coordinate conversion, and upload structure inspection (available from MCP tool surface v2, SIG-1252). It is the largest part of a platform | Placeholders when the app owns the file; `fixed_positions` otherwise |
+| How places are defined | `[[place_key]]` placeholders in the file; `fixed_positions` in code; DOCX template fields plus places; a UI where users draw fields | App controls the document source → placeholders. Third-party PDF → `fixed_positions`. PDF viewer component present → drawing UI is feasible | A drawing UI needs page rendering, coordinate conversion, and reading the upload's structure (`inspect_upload`). It is the largest part of a platform | Placeholders when the app owns the file; `fixed_positions` otherwise |
 | Recipient types and `routing` | `signer`, `approver`, `preparer`, `automatic_signer`; `routing` `sequential` or `parallel` | Approval step in the domain flow → `approver`. Fields filled before signing → `preparer`. Countersignature by the app owner → `automatic_signer` | `sequential` notifies one recipient at a time. `parallel` notifies all at once | One `signer`; `sequential` |
 | Authentication per recipient | `email_link`, `email_code`, `custom`, `identity_verification` | Signer is logged in to the app → `custom`. Signer is outside the app → `email_link`. Regulated or high-value document → `email_code` or `identity_verification` | `custom` is an assertion written to the audit log. `email_link` returns no ceremony URL; the email carries it | `email_link` |
 | Ceremony delivery and return | Emailed link; embedded with `embeddable_in`; `redirect_url` after the ceremony | Web frontend and logged-in signer → embedded. No frontend → emailed | Embedded ceremonies ignore `redirect_url`; the app learns the outcome from events. `redirect_url` receives the outcome, the envelope id and the recipient id as query parameters; the names are in the spec's `Ceremony.RedirectUrl` description | Emailed link, no redirect |
@@ -79,58 +161,54 @@ from MCP tool surface v2 (SIG-1252)".
 | Senders and multi-tenant | Account default sender; per-customer `sender` after `POST /senders` verification; `topics` per tenant | Tenant table present and customers send in their own name → per-customer sender. Tenant table present and one brand → default sender plus `topics` | A sender needs email verification before use. `topics` filter webhooks and envelope listings | Account default sender |
 | Attestation | `none`, `mx_nom151`, `br_icp_brasil` | Mexican or Brazilian legal context in the domain → the matching value | Both paid options must be enabled at the account level | `none` |
 
-## Infer or ask
+## Cover the whole product, not only the API
 
-Apply one rule to every row of the matrix:
-
-- **Strong signal.** Decide. State the decision and the evidence.
-- **Weak signal.** Propose the default. Ask the user to confirm it in the
-  same message as the open questions.
-- **No signal.** Ask.
-
-Never silently pick a default on a decision that changes the data model, the
-authentication method, or who receives email. Ask, even when you could infer
-it.
-
-Ask every open question in **one message**. Ask only the questions the code
-and the request leave open. Number them in the matrix order. State the
-default you propose next to each question you can propose one for.
-
-### Worked example: the one message
-
-> Before I write the design, these answers decide it. I found a PDF
-> generator and an S3 client, so I propose the app generates and uploads
-> each document. Tell me what you know; confirm or change my proposals.
->
-> 1. Documents: I propose your app generates the PDF and uploads it. Confirm?
-> 2. Signature fields: positions fixed in code, placeholders written into
->    the files, or a UI where your users draw them?
-> 3. Signers: one or several per document? In a fixed order or all at once?
->    Is an emailed link enough, or are signers logged in to your app when
->    they sign?
-> 4. Signing: from an emailed link, or inside your app's pages? Where should
->    the signer land afterwards?
-> 5. When everything is signed: what should the app do? Where do the signed
->    PDF and the audit log get stored? I propose S3, next to your invoices.
-> 6. Test mode only for now, or live as well? Who holds the live key?
-> 7. Does every envelope go out in your name, or in each of your customers'
->    names?
+The matrix settles the API configuration. A product design has more in it.
+`references/coverage-checklist.md` lists the other areas. Ownership and
+permissions. The draft and template lifecycle. Tenant isolation. Sensitive
+data and retention. Idempotency and repair paths. Volume and observability.
+Accessibility and localization. Explicit non-goals. Walk the list once
+before writing. Take from it what this product needs. It is a checklist for
+you, not a questionnaire for the user. Most items resolve from the journey
+and the code without a question.
 
 ## Write the design document
 
-Write the document to `docs/signatureapi-integration.md` in the user's
-repository. Create `docs/` if it is missing. If the repository keeps
-documentation elsewhere, still write this file at this path. Then add a
-one-line pointer to it where their documentation lives.
+Write the document only once the direction is understood. That means the
+journey is confirmed and the shape is chosen. Every decision that changes
+the data model, the authentication or who receives email has a yes.
 
-Use this template. Keep the headings. Fill every section.
+Location: the repository's established place for design records when it
+has one (an ADR directory, a design-docs folder), in that convention. Then
+put a one-line pointer at `docs/signatureapi-integration.md`, so
+`signatureapi-integrate` finds it. Without an established place, write the
+document itself at `docs/signatureapi-integration.md`. Create `docs/` if it
+is missing.
+
+Use this template. Keep the headings. Fill every section that applies; delete
+a section only when you say why in Open items.
 
 ```markdown
-# SignatureAPI integration design
+# <the user's name for this feature> — SignatureAPI integration design
 
 Date: YYYY-MM-DD
 Status: draft | approved
-Shape: <Shape 1, 2 or 3 from references/product-shapes.md, by name>
+Starting point: <closest shape from references/product-shapes.md, or "custom">
+Departures from it: <one line each, or "none">
+
+## The experience
+
+- Journey:
+- Actors:
+- Success condition:
+- Constraints:
+- Non-goals:
+
+## Vocabulary
+
+| The user's term | Means, at the API boundary |
+| --- | --- |
+| <their term> | <envelope / recipient / place / ceremony / deliverable, and how> |
 
 ## Decisions
 
@@ -179,6 +257,13 @@ Shape: <Shape 1, 2 or 3 from references/product-shapes.md, by name>
 - Evidence or answer:
 - Consequence:
 
+## Product coverage
+
+<one short entry per applicable area from references/coverage-checklist.md:
+ownership and permissions; drafts and templates; tenant isolation; sensitive
+data and retention; idempotency, reconciliation and repair; volume and
+observability; accessibility, mobile, localization, branding>
+
 ## Endpoint sequence the application calls
 
 1. <method and path, and where in the codebase it is called from>
@@ -204,17 +289,22 @@ approved` only after the user says yes. The file is the contract
 
 | Thought | Reality |
 | --- | --- |
+| "I'll read the code first, then ask." | The code says where signing fits. It does not say what the user wants their people to experience. Ask that first. |
 | "This is obvious, I'll skip the document." | The envelope call is the smallest part. Document source, place definition and the completion handler are where a wrong guess costs days. Write the document. |
-| "They said 'like X', so I'll copy X's data model." | X's concepts (templates, envelopes-as-drafts, tabs) are not SignatureAPI's. Design from this API's objects. |
-| "I'll ask one question at a time." | Seven round trips is how users stop answering. One message, only the open questions. |
+| "They said 'like X', so I'll copy X's data model." | X's concepts (templates, envelopes-as-drafts, tabs) are not SignatureAPI's. Map the user's needs onto this API's objects. |
+| "I'll rename their 'contract' to 'envelope'." | Their word stays. The mapping goes in the Vocabulary table. |
+| "I'll ask everything in one message to save round trips." | Twelve decisions in one message is a form, and forms go unanswered. Four questions, grouped, then the next group. |
+| "I'll ask one question at a time." | Related questions go together. A signer question needs its authentication question next to it. |
+| "It's one of the three shapes." | The shapes are starting points. Name the closest one and the departures. A hybrid or a custom flow is a valid answer. |
 | "The codebase answers these." | The codebase answers where signing belongs and often the document source. It does not answer who signs, how they authenticate, or who gets email. Ask those. |
 | "I'll pick sensible defaults and note them." | `custom` authentication, a placeholder scheme and "store the PDF in S3" are product decisions. Propose them and get a yes. Do not build on them unapproved. |
-| "It's a platform, I'll design all three shapes." | A self-serve platform is one shape. Design the one the user confirmed. |
+| "It's a platform, I'll design all three shapes." | Design the product the user confirmed, not every product SignatureAPI could support. |
 | "I can infer this, so I won't ask." | Ask when a wrong inference changes the data model, the authentication method, or who receives email. Inference is evidence, not approval. |
 
 ## References
 
-- `references/product-shapes.md` — the three common product shapes: what the app calls, what you prove it with
+- `references/product-shapes.md` — three common starting points: what the app calls, what you prove it with
+- `references/coverage-checklist.md` — the product-design areas beyond API configuration
 - `../signatureapi-integrate/references/brownfield-placement.md` — where signing belongs in an existing codebase
 - `../signatureapi-integrate/references/verification-loop.md` — why `custom` authentication is only for signers the app verified
 
@@ -223,6 +313,7 @@ approved` only after the user says yes. The file is the contract
 An **envelope** holds **documents** and **recipients**. **Places** are
 interactive regions on a document bound to a recipient. Each recipient signs
 through a **ceremony**. Completion produces a **deliverable**: signed
-documents plus an audit log. The **design document** is
+documents plus an audit log. These words describe the API boundary. The
+user's own words describe their product. The **design document** is
 `docs/signatureapi-integration.md`, the file this skill writes and
 `signatureapi-integrate` reads.
