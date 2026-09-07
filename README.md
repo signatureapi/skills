@@ -45,7 +45,7 @@ ecosystem, so the plugin path and the `npx skills` path always carry identical s
 Installing the plugin configures the MCP server; SignatureAPI sign-in is a separate step.
 Claude Code reports `! Needs authentication` until you run `/mcp`. Codex's marketplace manifest
 declares `policy.authentication: "ON_INSTALL"`, so an interactive install may offer the sign-in
-right away; if it does not (a non-interactive install verified on 2026-09-04 did not), run
+right away; if it does not (a non-interactive install does not), run
 `codex mcp login signatureapi`. Gemini CLI's manifest declares `oauth.enabled: true`; run
 `/mcp auth signatureapi` inside Gemini CLI if it does not prompt.
 
@@ -69,7 +69,7 @@ the same file the Claude Code and Grok Build plugins install elsewhere.
   misbehaves: an envelope stuck in processing, a webhook that never arrived, a recipient who
   never got the signing email, a missing deliverable, or a validation error on create.
 
-Skills are written in plain language; `STYLE.md` has the rules and `npm test` checks them.
+Skills are written in plain language and stay timeless and public; `STYLE.md` has the rules and `npm test` checks them.
 
 The two surfaces are kept apart on purpose. The code an agent writes into your application calls
 the REST API (`https://api.signatureapi.com/v1`); the MCP server and the bundled scripts are the

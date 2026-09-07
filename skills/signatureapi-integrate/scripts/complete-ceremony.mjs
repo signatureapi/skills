@@ -143,9 +143,8 @@ const TERMINAL_NON_COMPLETED_RECIPIENT_STATUSES = ["rejected", "soft_bounced", "
  * The only source of truth for "did this ceremony actually complete": polls
  * GET /envelopes/{id} until the target recipient reaches `completed`, or a
  * terminal non-completed status, or the timeout expires. The browser walk
- * finishing without error proves nothing by itself — SIG-1222's found defect
- * was exactly a script that reported success after a walk whose clicks
- * silently no-op'd. This is the check that replaces that false claim.
+ * finishing without error proves nothing by itself — an earlier version of
+ * this script reported success after a walk whose clicks silently no-op'd. This is the check that replaces that false claim.
  *
  * `recipientKey` is required — it is never defaulted to `recipients[0]`.
  * `resolveTargetRecipientKey` returns null whenever the ceremony URL's
@@ -286,7 +285,8 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   const page = await browser.newPage();
   await page.goto(url, { waitUntil: "networkidle" });
 
-  // Arm completion with genuine pointer movement (SIG-1211 organic-input gate).
+  // Arm completion with genuine pointer movement: the signer UI only enables
+  // completion after organic pointer input, to keep link scanners from signing.
   for (let i = 0; i < 12; i++) {
     await page.mouse.move(100 + i * 40, 150 + i * 25, { steps: 4 });
   }
@@ -301,12 +301,12 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   // ids/labels this script used before (`#continue-consent-button`,
   // `#primary-button`/`#primary-button-inline`,
   // `button[aria-label="Sign here"]`, `#typed_symbol`, `#adopt-button`, the
-  // consent/adoption checkboxes) are kept as a FALLBACK, because the new
-  // attributes are not deployed to staging or production yet — a walker that
-  // only understood the new contract would break against every
-  // currently-deployed environment. Once every environment ships the new
-  // attributes, `privateSelector` arguments below (and the fallback branch
-  // of stepLocator/noteFallbackIfUsed) can be deleted.
+  // consent/adoption checkboxes) are kept as a FALLBACK for an environment
+  // that does not carry the attributes. The script reports every step that
+  // needed the fallback, so a run against such an environment is visible in
+  // its output rather than silent. When no environment needs them any more,
+  // the `privateSelector` arguments below (and the fallback branch of
+  // stepLocator/noteFallbackIfUsed) can be deleted.
   const fallbackStepsUsed = [];
 
   /** Combines the primary `data-ceremony-step` selector with the private
@@ -345,7 +345,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
    *                 other than a plain "never appeared" timeout — refuse to
    *                 guess which element is the real one.
    *
-   * This is the fix for SIG-1222's C1: `disclosure`/`adopt` used to be both
+   * This fixes a selector collision: `disclosure`/`adopt` used to be both
    * the checkbox attribute AND (via the private-id fallback) the container
    * selector, so once the checkboxes (rendered N-up in a `.map()`) also
    * carried a `data-ceremony-step` attribute, the combined selector matched
@@ -418,7 +418,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
    * Also refuses to click anything whose accessible label reads as a
    * decline/reject/refuse action — belt-and-suspenders on top of using
    * specific ids/labels instead of a generic "primary action" regex hunt,
-   * which is what let SIG-1222's script click "Decline to sign".
+   * which is what once let this script click "Decline to sign".
    *
    * Fails closed on the label check itself: the original version read
    * `textContent()` and treated a read failure as `""`, which passes the
@@ -497,7 +497,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   // Continue" must be there too. The container selector is
   // `disclosure-modal` — deliberately NOT the same value ("disclosure") as
   // the checkbox(es) inside it, which is exactly the collision that caused
-  // SIG-1222's C1 (see probeContainer's doc comment above).
+  // the selector collision described in probeContainer's doc comment above.
   walkLastStep = "checking for the disclosure/consent modal";
   const consentModal = stepLocator(page, "disclosure-modal", "#concent-modal");
   const consentModalProbe = await probeContainer(consentModal, 8000);
