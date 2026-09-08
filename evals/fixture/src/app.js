@@ -1,0 +1,10 @@
+import express from "express";
+import session from "express-session";
+import { stripeWebhook } from "./routes/webhooks/stripe.js";
+import { engagements } from "./routes/engagements.js";
+const app = express();
+app.post("/webhooks/stripe", express.raw({ type: "application/json" }), stripeWebhook);
+app.use(express.json());
+app.use(session({ secret: process.env.SESSION_SECRET, resave: false, saveUninitialized: false }));
+app.use("/engagements", engagements);
+export default app;

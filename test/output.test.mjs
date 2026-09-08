@@ -74,8 +74,8 @@ test("resolveKey exits when no key is set", () => {
 });
 
 test("gap records the operation, the fallback and where to report it", () => {
-  const g = gap("read webhook deliveries", "none", "No delivery log exists on any surface.");
+  const g = gap("do the thing", "REST GET /things", "The client lists no tool for it.");
   assert.equal(g.gap, true);
-  assert.equal(g.operation, "read webhook deliveries");
+  assert.equal(g.operation, "do the thing");
   assert.match(g.report_to, /github\.com\/signatureapi\/skills/);
 });

@@ -17,7 +17,7 @@ export function buildFilemap(entries) {
 // Hand-maintained fallback for scripts with no leading file-level comment to
 // pull a description from. Keyed by path suffix (matched with endsWith), so
 // one entry covers a script shared verbatim across skills (e.g. lib/output.mjs).
-// Every top-level script now carries its own leading header comment (SIG-1222),
+// Every top-level script carries its own leading header comment,
 // so this only needs to cover files that intentionally have none, like the
 // shared lib. Keep in sync when a script is added, renamed, or gains/loses a
 // leading comment.
