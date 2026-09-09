@@ -199,9 +199,13 @@ the deliverable: the same flow written into the application.
    recipient defaults to `custom` authentication, so the Verify step below
    never needs an email lookup. Pass `--auth email_link` for the API's own
    default, which is what production recipients typically use. Or pass
-   `--auth email_code`. `references/verification-loop.md` explains the
-   tradeoffs, including why `custom` is the wrong choice for a real
-   recipient. Every place's `recipient_key` must match a recipient's `key`.
+   `--auth email_code`. `authentication` is an ordered array, so `--auth`
+   also takes a comma-separated list. `--auth email_link,email_code` keeps
+   SignatureAPI sending the invitation email and adds an emailed code as a
+   second step. The application sends no email of its own.
+   `references/verification-loop.md` explains the tradeoffs, including which
+   method delivers the ceremony URL and why `custom` is the wrong choice for
+   a real recipient. Every place's `recipient_key` must match a recipient's `key`.
    Read `references/places.md` for how places bind to a document. Then
    create it for real: re-run the same command without `--dry-run`. In a
    test-mode MCP session, `create_envelope` with the adapted body works too.
@@ -278,7 +282,7 @@ Full detail on both branches: `references/verification-loop.md`.
 | `scripts/check-setup.mjs` | Credentials, mode and reachability |
 | `scripts/openapi-explore.mjs` | Query the spec: `paths`, `path <method> <path>`, `schema <name>`, `webhooks` |
 | `scripts/make-test-document.mjs` | Build and upload a throwaway test PDF |
-| `scripts/create-test-envelope.mjs` | Print or create a minimum viable test envelope (`--auth custom\|email_link\|email_code`, default `custom`) |
+| `scripts/create-test-envelope.mjs` | Print or create a minimum viable test envelope (`--auth` takes one or a comma-separated list of `custom`, `email_link`, `email_code`; default `custom`) |
 | `scripts/watch-events.mjs` | REST fallback for `list_events`: poll until the envelope reaches a terminal status (`--once` for a single check) |
 | `scripts/webhook-receiver.mjs` | Local receiver that prints arriving events |
 | `scripts/complete-ceremony.mjs` | Branch B browser walk (test mode only, no bypass) |
