@@ -14,13 +14,22 @@ Test mode only.
 
 `create-test-envelope.mjs` defaults `--auth` to `custom`, not to the API's own
 default (`email_link`). That default exists only for this verification loop.
-It is not a general recommendation for how to authenticate recipients. The
-three authentication types behave differently on the create response:
+It is not a general recommendation for how to authenticate recipients.
+
+`authentication` is an ordered array, not a single choice. The **first**
+entry is the main method and decides whether the create response carries a
+usable URL. Any later entry is an extra challenge the signer completes inside
+the ceremony, and it never changes who delivers the URL. `--auth` takes a
+comma-separated list, so `--auth email_link,email_code` produces
+`[{email_link},{email_code}]`.
+
+The main methods behave differently on the create response:
 
 - `email_link` (the API default, and what production envelopes typically
   use): `ceremony.url` is `null` by design, in test mode and live mode alike.
   Possession of the emailed link is the recipient's authentication. So the
-  API never exposes it outside the email itself.
+  API never exposes it outside the email itself. This holds whatever follows
+  it in the array.
 - `email_code`: `ceremony.url` is returned, but the ceremony still carries
   one unsatisfied challenge. The signer must type a code that only ever lives
   in the email log. This moves the email lookup to the signer's side without
@@ -29,10 +38,16 @@ three authentication types behave differently on the create response:
   else needs to be fetched to reach a completable ceremony.
 
 Branch B drives a headless script that cannot call MCP tools. So it cannot
-read the email log at all. Only `custom` gives it a URL it can act on
-directly. `email_code` also returns a URL, but a human still has to relay the
-code. Branch A works with any of the three. Using `custom` there too keeps
-one recipe instead of two.
+read the email log at all. Only a first method of `custom` gives it a URL it
+can act on directly. A first method of `email_code` also returns a URL, but a
+human still has to relay the code. Branch A works with any of them. Using
+`custom` there too keeps one recipe instead of two.
+
+`[email_link, email_code]` is the combination to reach for when the
+application should send no email of its own. SignatureAPI sends the
+invitation link *and* the code, and the signer must still clear a second
+factor. It is not a case where the integrator delivers the URL. That is only
+true when `email_code` is the first method.
 
 **`custom` authentication asserts that your application verified the
 recipient's identity.** The `provider` and `data` values you pass are written
