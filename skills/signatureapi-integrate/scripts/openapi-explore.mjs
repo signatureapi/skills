@@ -30,6 +30,113 @@ export function selectSchema(spec, name) {
   return hit ? schemas[hit] : null;
 }
 
+function resolveLocalRef(spec, value) {
+  if (!value?.$ref?.startsWith("#/")) return value;
+  return value.$ref
+    .slice(2)
+    .split("/")
+    .reduce((node, part) => node?.[part.replaceAll("~1", "/").replaceAll("~0", "~")], spec);
+}
+
+function parameterCard(spec, value) {
+  const parameter = resolveLocalRef(spec, value) ?? {};
+  const schema = resolveLocalRef(spec, parameter.schema) ?? {};
+  return {
+    name: parameter.name,
+    in: parameter.in,
+    required: parameter.required ?? false,
+    description: parameter.description ?? null,
+    type: schema.type ?? null,
+    format: schema.format ?? null,
+    default: schema.default ?? null,
+    enum: schema.enum ?? null,
+    minimum: schema.minimum ?? null,
+    maximum: schema.maximum ?? null,
+  };
+}
+
+/** Compact method-aware cards for every operation matching a name, path, summary, or description. */
+export function listOperations(spec, filter) {
+  const needle = filter?.toLowerCase();
+  const operations = [];
+  for (const [path, item] of Object.entries(spec?.paths ?? {})) {
+    for (const [method, operation] of Object.entries(item)) {
+      if (!/^(get|post|put|patch|delete)$/i.test(method) || !operation?.operationId) continue;
+      const card = {
+        name: operation.operationId,
+        method: method.toUpperCase(),
+        path,
+        summary: operation.summary ?? operation.operationId,
+        description: operation.description ?? null,
+      };
+      const searchable = Object.values(card).filter(Boolean).join(" ").toLowerCase();
+      if (!needle || searchable.includes(needle)) operations.push(card);
+    }
+  }
+  return operations;
+}
+
+/** Inspect one exact method/path pair. Absence includes nearby operations instead of implying a capability. */
+export function inspectOperation(spec, method, path) {
+  const normalizedMethod = method?.toUpperCase();
+  const operation = spec?.paths?.[path]?.[method?.toLowerCase()];
+  if (!operation?.operationId) {
+    const relatedTerm = path
+      ?.split("/")
+      .filter((part) => part && !part.startsWith("{"))
+      .at(-1);
+    return {
+      found: false,
+      requested: `${normalizedMethod} ${path}`,
+      related: listOperations(spec, relatedTerm ?? path),
+    };
+  }
+  const pathParameters = spec.paths[path].parameters ?? [];
+  const operationParameters = operation.parameters ?? [];
+  return {
+    found: true,
+    operation: {
+      name: operation.operationId,
+      method: normalizedMethod,
+      path,
+      summary: operation.summary ?? operation.operationId,
+      description: operation.description ?? null,
+      parameters: [...pathParameters, ...operationParameters].map((parameter) => parameterCard(spec, parameter)),
+      request_body: operation.requestBody?.content?.["application/json"]?.schema ?? null,
+      responses: Object.keys(operation.responses ?? {}),
+    },
+  };
+}
+
+function operationLine(operation) {
+  return `- \`${operation.method} ${operation.path}\` — ${operation.summary}`;
+}
+
+/** Agent-readable exact-operation result. This describes a local inspection, never an API response. */
+export function renderOperationMarkdown(result) {
+  if (!result.found) {
+    const related = result.related.length
+      ? `\n## Related operations\n\n${result.related.map(operationLine).join("\n")}\n`
+      : "";
+    return `# Local contract inspection: operation not found\n\nNo API request was sent.\n\n\`${result.requested}\` is not defined by the public OpenAPI contract.\n${related}\nDo not send this request or guess another path.`;
+  }
+  const { operation } = result;
+  const parameters = operation.parameters.length
+    ? [
+        "## Parameters",
+        "",
+        "| Name | Location | Required | Contract |",
+        "| --- | --- | --- | --- |",
+        ...operation.parameters.map((parameter) => {
+          const constraints = [parameter.type, parameter.format, parameter.minimum !== null && `minimum ${parameter.minimum}`, parameter.maximum !== null && `maximum ${parameter.maximum}`, parameter.enum && `one of ${parameter.enum.join(", ")}`].filter(Boolean).join(", ");
+          return `| \`${parameter.name}\` | ${parameter.in} | ${parameter.required ? "yes" : "no"} | ${constraints || "not specified"} |`;
+        }),
+        "",
+      ].join("\n")
+    : "";
+  return `# Local contract inspection: ${operation.name}\n\nNo API request was sent.\n\n\`${operation.method} ${operation.path}\`\n\n${operation.summary}\n\n${parameters}## Responses\n\n${operation.responses.map((status) => `- \`${status}\``).join("\n")}`;
+}
+
 async function loadSpec() {
   let parse;
   try {
@@ -65,33 +172,20 @@ if (import.meta.url === `file://${process.argv[1]}`) {
 
   const spec = await loadSpec();
 
-  if (mode === "paths") {
-    const filter = args[0]?.toLowerCase();
-    const out = [];
-    for (const [p, item] of Object.entries(spec.paths ?? {})) {
-      for (const [method, op] of Object.entries(item)) {
-        if (typeof op !== "object" || !op.operationId) continue;
-        const line = `${method.toUpperCase()} ${p} — ${op.summary ?? op.operationId}`;
-        if (!filter || line.toLowerCase().includes(filter)) out.push(line);
-      }
-    }
+  if (mode === "paths" || mode === "operations") {
+    const out = listOperations(spec, args[0]);
     ok({ count: out.length, operations: out });
   }
 
-  if (mode === "path") {
+  if (mode === "path" || mode === "operation") {
     const [method, p] = args;
-    const op = spec.paths?.[p]?.[method?.toLowerCase()];
-    if (!op) {
+    const result = inspectOperation(spec, method, p);
+    if (!result.found) {
       fail("OPERATION_NOT_FOUND", `No ${method} ${p} in the spec.`, [
         "node scripts/openapi-explore.mjs paths envelope",
       ]);
     }
-    ok({
-      operation: op.operationId,
-      summary: op.summary,
-      request_body: op.requestBody?.content?.["application/json"]?.schema ?? null,
-      responses: Object.keys(op.responses ?? {}),
-    });
+    ok(result.operation);
   }
 
   if (mode === "schema") {
