@@ -1,10 +1,9 @@
 #!/usr/bin/env node
 // Part of the SignatureAPI signatureapi-integrate skill. Queries the
-// bundled OpenAPI spec (paths, path detail, schema) instead of reading the
+// published OpenAPI spec (operations, request checks, schemas, webhooks)
+// instead of reading the
 // full docs page. Test-mode tooling, not production code. Full workflow:
 // SKILL.md.
-import { ok, fail } from "./lib/output.mjs";
-
 const SPEC_URL = process.env.SIGNATUREAPI_SPEC_URL ?? "https://spec.signatureapi.com/openapi.yaml";
 
 /** Every webhook event type declared in the spec's top-level `webhooks`
@@ -137,79 +136,209 @@ export function renderOperationMarkdown(result) {
   return `# Local contract inspection: ${operation.name}\n\nNo API request was sent.\n\n\`${operation.method} ${operation.path}\`\n\n${operation.summary}\n\n${parameters}## Responses\n\n${operation.responses.map((status) => `- \`${status}\``).join("\n")}`;
 }
 
-async function loadSpec() {
-  let parse;
-  try {
-    ({ parse } = await import("yaml"));
-  } catch {
-    fail("DEPENDENCIES_MISSING", "The yaml package is not installed for this skill.", [
-      "npm i    # run once inside the skill directory",
-    ]);
+function pathMatches(template, concrete) {
+  const expected = template.split("/").filter(Boolean);
+  const actual = concrete.split("/").filter(Boolean);
+  return expected.length === actual.length && expected.every((part, index) => /^\{[^}]+\}$/.test(part) || part === actual[index]);
+}
+
+function candidatePaths(pathname) {
+  const candidates = [pathname];
+  if (pathname.startsWith("/v1/")) candidates.push(pathname.slice(3));
+  return candidates;
+}
+
+function parseTarget(target) {
+  const url = new URL(target, "https://contract.invalid");
+  return { pathname: url.pathname, query: url.searchParams };
+}
+
+function parameterProblem(parameter, raw) {
+  let value = raw;
+  if (parameter.type === "integer" || parameter.type === "number") {
+    value = Number(raw);
+    if (!Number.isFinite(value) || (parameter.type === "integer" && !Number.isInteger(value))) {
+      return `\`${parameter.name}\` must be ${parameter.type}; received \`${raw}\`.`;
+    }
+  } else if (parameter.type === "boolean" && raw !== "true" && raw !== "false") {
+    return `\`${parameter.name}\` must be boolean; received \`${raw}\`.`;
   }
+  if (parameter.enum && !parameter.enum.map(String).includes(String(value))) {
+    return `\`${parameter.name}\` must be one of ${parameter.enum.join(", ")}; received \`${raw}\`.`;
+  }
+  if (parameter.minimum !== null && value < parameter.minimum) {
+    return `\`${parameter.name}\` is ${raw}; its minimum is ${parameter.minimum}.`;
+  }
+  if (parameter.maximum !== null && value > parameter.maximum) {
+    return `\`${parameter.name}\` is ${raw}; its maximum is ${parameter.maximum}.`;
+  }
+  return null;
+}
+
+/** Validate method, concrete path and query values locally against the OpenAPI contract. */
+export function checkRequest(spec, method, target) {
+  const normalizedMethod = method?.toUpperCase();
+  let parsed;
+  try {
+    parsed = parseTarget(target);
+  } catch {
+    return {
+      ok: false,
+      request_sent: false,
+      requested: `${normalizedMethod} ${target}`,
+      operation: null,
+      related: [],
+      problems: [{ parameter: null, message: `\`${target}\` is not a valid URL or path.` }],
+    };
+  }
+  const templates = Object.keys(spec?.paths ?? {}).filter((template) =>
+    candidatePaths(parsed.pathname).some((candidate) => pathMatches(template, candidate)),
+  );
+  const template = templates.find((candidate) => spec.paths[candidate]?.[method?.toLowerCase()]);
+  if (!template) {
+    const related = templates.flatMap((candidate) =>
+      listOperations(spec).filter((operation) => operation.path === candidate),
+    );
+    const fallbackTerm = parsed.pathname.split("/").filter(Boolean).at(-1);
+    return {
+      ok: false,
+      request_sent: false,
+      requested: `${normalizedMethod} ${parsed.pathname}`,
+      operation: null,
+      related: related.length ? related : listOperations(spec, fallbackTerm),
+      problems: [
+        {
+          parameter: null,
+          message: `\`${normalizedMethod} ${parsed.pathname}\` does not match a public API operation.`,
+        },
+      ],
+    };
+  }
+  const operation = inspectOperation(spec, normalizedMethod, template).operation;
+  const queryParameters = operation.parameters.filter((parameter) => parameter.in === "query");
+  const known = new Set(queryParameters.map((parameter) => parameter.name));
+  const problems = [];
+  for (const name of new Set(parsed.query.keys())) {
+    if (!known.has(name)) {
+      problems.push({ parameter: name, message: `\`${name}\` is not a query parameter for this operation.` });
+    }
+  }
+  for (const parameter of queryParameters) {
+    const values = parsed.query.getAll(parameter.name);
+    if (parameter.required && values.length === 0) {
+      problems.push({ parameter: parameter.name, message: `\`${parameter.name}\` is a required query parameter.` });
+      continue;
+    }
+    for (const value of values) {
+      const message = parameterProblem(parameter, value);
+      if (message) problems.push({ parameter: parameter.name, message });
+    }
+  }
+  return {
+    ok: problems.length === 0,
+    request_sent: false,
+    requested: `${normalizedMethod} ${parsed.pathname}${parsed.query.size ? `?${parsed.query}` : ""}`,
+    operation,
+    related: [],
+    problems,
+  };
+}
+
+/** Agent-readable request verdict. This checks the contract locally and never calls the API. */
+export function renderRequestCheckMarkdown(result) {
+  const heading = result.ok ? "# Local request check passed" : "# Local request check failed";
+  const matched = result.operation
+    ? `\nMatched operation: \`${result.operation.method} ${result.operation.path}\` (${result.operation.name}).\n`
+    : "";
+  const problems = result.problems.length
+    ? `\n## Problems\n\n${result.problems.map((problem) => `- ${problem.message}`).join("\n")}\n`
+    : "";
+  return `${heading}\n\nNo API request was sent.\n${matched}${problems}`.trim();
+}
+
+export function renderOperationsMarkdown(operations, filter) {
+  const title = filter ? `# Operations matching “${filter}”` : "# Public API operations";
+  if (operations.length === 0) return `${title}\n\nNo matching operations were found.`;
+  const rows = operations.map(
+    (operation) => `| ${operation.name} | \`${operation.method} ${operation.path}\` | ${operation.summary} |`,
+  );
+  return `${title}\n\n| Name | Operation | Purpose |\n| --- | --- | --- |\n${rows.join("\n")}\n\n${operations.length} operation${operations.length === 1 ? "" : "s"} found.`;
+}
+
+async function loadSpec() {
+  const { parse } = await import("yaml");
   const res = await fetch(SPEC_URL);
   if (!res.ok) {
-    fail("SPEC_UNREACHABLE", `Could not fetch ${SPEC_URL} (HTTP ${res.status}).`, [
-      `curl -sS ${SPEC_URL} | head`,
-      "Check network access, then retry",
-    ]);
+    throw new Error(`Could not fetch the OpenAPI document (HTTP ${res.status}).`);
   }
   return parse(await res.text());
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
-  const [mode, ...args] = process.argv.slice(2);
+function printResult(data, markdown, json, failed = false) {
+  console.log(json ? JSON.stringify(data, null, 2) : markdown);
+  if (failed) process.exitCode = 1;
+}
 
+async function main(argv) {
+  const json = argv.includes("--json");
+  const clean = argv.filter((arg) => arg !== "--json");
+  const [mode, ...args] = clean;
+  const usage = [
+    "openapi-explore.mjs operations [filter]",
+    "openapi-explore.mjs operation <method> <path>",
+    "openapi-explore.mjs check-request <method> <url-or-path>",
+    "openapi-explore.mjs schema <name>",
+    "openapi-explore.mjs webhooks [filter]",
+  ];
   if (!mode || mode === "--help") {
-    ok({
-      usage: [
-        "openapi-explore.mjs paths [filter]        list operations, optionally filtered by substring",
-        "openapi-explore.mjs path <method> <path>  show one operation's request body and responses",
-        "openapi-explore.mjs schema <name>         show one schema's properties and required fields",
-        "openapi-explore.mjs webhooks [filter]     list webhook event types with their payload schema",
-      ],
-    });
+    printResult({ ok: true, usage }, `# OpenAPI explorer\n\n${usage.map((line) => `- \`${line}\``).join("\n")}`, json);
+    return;
   }
-
   const spec = await loadSpec();
-
   if (mode === "paths" || mode === "operations") {
-    const out = listOperations(spec, args[0]);
-    ok({ count: out.length, operations: out });
+    const operations = listOperations(spec, args[0]);
+    printResult({ ok: true, count: operations.length, operations }, renderOperationsMarkdown(operations, args[0]), json);
+    return;
   }
-
   if (mode === "path" || mode === "operation") {
-    const [method, p] = args;
-    const result = inspectOperation(spec, method, p);
-    if (!result.found) {
-      fail("OPERATION_NOT_FOUND", `No ${method} ${p} in the spec.`, [
-        "node scripts/openapi-explore.mjs paths envelope",
-      ]);
-    }
-    ok(result.operation);
+    const result = inspectOperation(spec, args[0], args[1]);
+    printResult({ ok: result.found, ...result }, renderOperationMarkdown(result), json, !result.found);
+    return;
   }
-
+  if (mode === "check-request") {
+    const result = checkRequest(spec, args[0], args[1]);
+    printResult(result, renderRequestCheckMarkdown(result), json, !result.ok);
+    return;
+  }
   if (mode === "schema") {
     const schema = selectSchema(spec, args[0] ?? "");
-    if (!schema) {
-      fail("SCHEMA_NOT_FOUND", `No schema named ${args[0]}.`, ["node scripts/openapi-explore.mjs paths"]);
-    }
-    ok({
-      name: args[0],
-      required: schema.required ?? [],
-      properties: Object.keys(schema.properties ?? {}),
-      schema,
-    });
+    const found = Boolean(schema);
+    const data = { ok: found, name: args[0], required: schema?.required ?? [], properties: Object.keys(schema?.properties ?? {}), schema };
+    const markdown = found
+      ? `# Schema: ${args[0]}\n\n## Required\n\n${data.required.length ? data.required.map((name) => `- \`${name}\``).join("\n") : "None."}\n\n## Properties\n\n${data.properties.length ? data.properties.map((name) => `- \`${name}\``).join("\n") : "None."}\n\n## Contract fragment\n\n\`\`\`json\n${JSON.stringify(schema, null, 2)}\n\`\`\``
+      : `# Local contract inspection: schema not found\n\nNo API request was sent.\n\nNo schema named \`${args[0]}\` is defined.`;
+    printResult(data, markdown, json, !found);
+    return;
   }
-
   if (mode === "webhooks") {
     const events = listWebhooks(spec, args[0]);
-    if (events.length === 0) {
-      fail("WEBHOOK_NOT_FOUND", `No webhook event type matches "${args[0] ?? ""}".`, [
-        "node scripts/openapi-explore.mjs webhooks",
-      ]);
-    }
-    ok({ count: events.length, events });
+    const markdown = events.length
+      ? `# Webhook events${args[0] ? ` matching “${args[0]}”` : ""}\n\n${events.map((event) => `- \`${event.type}\` — ${event.summary ?? "No summary."}`).join("\n")}`
+      : `# Local contract inspection: webhook not found\n\nNo API request was sent.\n\nNo webhook event matches \`${args[0] ?? ""}\`.`;
+    printResult({ ok: events.length > 0, count: events.length, events }, markdown, json, events.length === 0);
+    return;
   }
+  printResult(
+    { ok: false, message: `Unknown command: ${mode}`, usage },
+    `# Local OpenAPI explorer error\n\nUnknown command: \`${mode}\`.\n\n${usage.map((line) => `- \`${line}\``).join("\n")}`,
+    json,
+    true,
+  );
+}
 
-  fail("UNKNOWN_MODE", `Unknown mode "${mode}".`, ["node scripts/openapi-explore.mjs --help"]);
+if (import.meta.url === `file://${process.argv[1]}`) {
+  main(process.argv.slice(2)).catch((error) => {
+    console.error(`# Local OpenAPI explorer error\n\nNo API request was sent.\n\n${error.message}`);
+    process.exitCode = 1;
+  });
 }
