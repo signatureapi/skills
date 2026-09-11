@@ -15,12 +15,14 @@ most likely in that shape.
 Identifiers here are illustrations; the spec wins. Query it before writing a
 body:
 
-    node ../../signatureapi-integrate/scripts/openapi-explore.mjs path post /envelopes
+    node ../../signatureapi-integrate/scripts/openapi-explore.mjs operation post /envelopes
     node ../../signatureapi-integrate/scripts/openapi-explore.mjs schema Ceremony.CeremonyInput
 
 **Tool availability.** When your client does not list a tool named here,
-use the REST endpoint of the same purpose and report the gap as the
-signatureapi-integrate SKILL.md describes.
+confirm the exact method and path in the public spec before using REST.
+Some MCP inspection capabilities have no public REST equivalent. Never infer
+one from the MCP tool name. Report the gap as the signatureapi-integrate
+SKILL.md describes.
 
 ## Shape 1 — send-for-signature inside an existing application
 

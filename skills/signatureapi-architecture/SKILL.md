@@ -164,19 +164,34 @@ design:
 
     node ../signatureapi-integrate/scripts/openapi-explore.mjs schema Envelope.EnvelopeInput
     node ../signatureapi-integrate/scripts/openapi-explore.mjs schema Ceremony.CeremonyInput
+    node ../signatureapi-integrate/scripts/openapi-explore.mjs schema Recipient.Type
     node ../signatureapi-integrate/scripts/openapi-explore.mjs schema Place.Type
 
 | Decision | Options | Signals that pick one | Consequences | Default |
 | --- | --- | --- | --- | --- |
 | Document input path | A signed or public URL to a file in the app's own storage; `POST /uploads` with the file bytes; a DOCX template merged with `data` | Object storage present → store there and pass a signed URL. No storage → `POST /uploads`. DOCX templates present → `format: docx` with `data`. A field-drawing UI → `POST /uploads`, because the structure read needs an upload id | The app keeps its own copy and record of the file. Upload URLs are temporary. DOCX `data` shapes the template fields the app must fill | A signed URL to the app's own storage |
 | How places are defined | `[[place_key]]` placeholders in the file; `fixed_positions` in code; DOCX template fields plus places; a UI where users draw fields | App controls the document source → placeholders. Third-party PDF → `fixed_positions`. PDF viewer component present → drawing UI is feasible | A drawing UI needs page rendering, coordinate conversion, and reading the upload's structure (`inspect_upload`). It is the largest part of a platform | Placeholders when the app owns the file; `fixed_positions` otherwise |
-| Recipient types and `routing` | `signer`, `approver`, `preparer`, `automatic_signer`; `routing` `sequential` or `parallel` | Approval step in the domain flow → `approver`. Fields filled before signing → `preparer`. Countersignature by the app owner → `automatic_signer` | `sequential` notifies one recipient at a time. `parallel` notifies all at once | One `signer`; `sequential` |
+| Recipient types and `routing` | The values in the current `Recipient.Type` schema; `routing` `sequential` or `parallel` | Approval step in the domain flow → `approver`. Fields filled before signing → `preparer`. Countersignature by the app owner → `automatic_signer`. A qualified-signature requirement → inspect `qualified_signer` and its account prerequisites | `sequential` notifies one recipient at a time. `parallel` notifies all at once | One `signer`; `sequential` |
 | Authentication per recipient | An ordered array of `email_link`, `email_code`, `custom`, `identity_verification`. The first entry is the main method; later entries are extra challenges | Signer is logged in to the app → `custom`. Signer is outside the app → `email_link`. Regulated or high-value document → add a challenge to that main method, e.g. `[email_link, email_code]` for a signer outside the app, `[custom, email_code]` for one inside it | The **first** entry decides who delivers the ceremony URL: `email_link` first returns no URL and SignatureAPI emails the link and any code, so the app sends no email; `email_code` or `custom` first returns the URL for the app to deliver. `custom` is an assertion written to the audit log. `email_link` and `custom` are only valid first and cannot be combined; `email_code` appears at most once; `identity_verification` is never first and is enabled per account | `[email_link]` |
 | Ceremony delivery and return | Emailed link; embedded with `embeddable_in`; `redirect_url` after the ceremony | Web frontend and logged-in signer → embedded. No frontend → emailed | Embedded ceremonies ignore `redirect_url`; the app learns the outcome from events. `redirect_url` receives the outcome, the envelope id and the recipient id as query parameters; the names are in the spec's `Ceremony.RedirectUrl` description | Emailed link, no redirect |
 | On `envelope.completed` | Fetch deliverables and store them; notify the domain; do nothing beyond marking status | Object storage present → store the signed PDF there. Document model present → attach to it | `standard` deliverable includes the audit log; `simple` does not. `delivery_type: none` stops SignatureAPI emailing the deliverable to the recipient | Handle `envelope.completed`, fetch `GET /envelopes/{envelopeId}/deliverables`, store the file, mark the domain row |
 | Rollout | Test mode only; test then live; who holds the live key | Env file with a `key_test_` key present → test first. Secrets manager present → live key goes there | Test envelopes send no email and are not binding. A live key must never enter this skill's scripts | Test mode first. The user names who holds the live key |
 | Senders and multi-tenant | Account default sender; per-customer `sender` after `POST /senders` verification; `topics` per tenant | Tenant table present and customers send in their own name → per-customer sender. Tenant table present and one brand → default sender plus `topics` | A sender needs email verification before use. `topics` filter webhooks and envelope listings | Account default sender |
 | Attestation | `none`, `mx_nom151`, `br_icp_brasil` | Mexican or Brazilian legal context in the domain → the matching value | Both paid options must be enabled at the account level | `none` |
+| Envelope email content | Product wording in `title` and `message`; account anti-phishing content capability when the wording contains URL-, phone-, or numeric-date-like text | Required product copy contains any restricted pattern → record account enablement as a prerequisite | A stricter account policy can reject content that is valid under the JSON schema. Do not silently rewrite required copy | Plain text without restricted patterns for generic fixtures |
+
+## Make scope explicit
+
+Before calling the design complete, inspect both `Recipient.Type` and
+`Place.Type` from the current spec and add a capability coverage table to the
+design. The user's requested first version and the defaults above are product
+scope, not the limits of SignatureAPI.
+
+Give every current recipient type and place type one disposition: included now
+or deferred with a reason. Closely related place types may share a row only
+when their disposition and reason are identical. This is a compact discovery
+record, not a request to build every capability. Re-run the schema commands
+when revising an older design so the table does not preserve a stale enum.
 
 ## Cover the whole product, not only the API
 
@@ -298,6 +313,18 @@ ownership and permissions; drafts and templates; tenant isolation; sensitive
 data and retention; idempotency, reconciliation and repair; volume and
 observability; accessibility, mobile, localization, branding>
 
+## SignatureAPI capability coverage
+
+| Area | Provider capability | Included now? | If deferred, why |
+| --- | --- | --- | --- |
+| Recipient type | <one current `Recipient.Type` value> | yes / no | <reason or n/a> |
+| Place type | <one current `Place.Type` value, or a group with one disposition> | yes / no | <reason or n/a> |
+
+## Account prerequisites
+
+- <account capability needed by an approved decision, including restricted
+  `title` or `message` content; or "none">
+
 ## Endpoint sequence the application calls
 
 1. <method and path, and where in the codebase it is called from>
@@ -336,6 +363,8 @@ lines. Set `Status: approved` only after the user says yes. The file is the cont
 | "The codebase answers these." | The codebase answers where signing belongs and often the document source. It does not answer who signs, how they authenticate, or who gets email. Ask those. |
 | "I'll pick sensible defaults and note them." | `custom` authentication, a placeholder scheme and "store the PDF in S3" are product decisions. Propose them and get a yes. Do not build on them unapproved. |
 | "It's a platform, I'll design all three shapes." | Design the product the user confirmed, not every product SignatureAPI could support. |
+| "The example uses only signers and three field types, so those are the supported types." | Defaults and first-version scope are not provider limits. Inspect the current recipient and place schemas, then record included and deferred capabilities explicitly. |
+| "The schema accepts this title and message, so the account will too." | Account anti-phishing policy can reject URL-, phone-, or numeric-date-like content in either field. Record enablement as a prerequisite when the product requires it. |
 | "I can infer this, so I won't ask." | Ask when a wrong inference changes the data model, the authentication method, or who receives email. Inference is evidence, not approval. |
 
 ## References

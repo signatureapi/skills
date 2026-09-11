@@ -53,10 +53,17 @@ before hand-writing a request. Its tools, by job:
 - Docs: `search_documentation` (a `page` argument returns one docs page in
   full).
 
-`get_envelope` takes `envelope_id`, not `id`. When your client does not list
-a tool, use the REST endpoint of the same purpose. Then report the gap:
-print a block naming the operation and the fallback, and point the user at
-https://github.com/signatureapi/skills/issues/new.
+`get_envelope` takes `envelope_id`, not `id`. A missing MCP tool does not
+prove that a same-purpose REST operation exists. Confirm the exact method
+and path first:
+
+    node scripts/openapi-explore.mjs operation <method> <path>
+
+Use the REST fallback only when that inspection succeeds. When it fails,
+stop instead of guessing another path. Report the missing operation and
+point the user at https://github.com/signatureapi/skills/issues/new. Test
+email inspection is an MCP or dashboard capability, not an established
+public REST fallback.
 
 **MCP mode is per session, not per call.** Call `whoami` first. The session
 acts in live mode when `modes.live` is true and the account is active.
@@ -103,10 +110,15 @@ disagrees, **the spec wins**. Query the spec before writing a request body or
 a handler. Do not read the docs pages for this; the create-envelope page
 alone is about 108 KB.
 
-    node scripts/openapi-explore.mjs paths [filter]
-    node scripts/openapi-explore.mjs path post /envelopes
+    node scripts/openapi-explore.mjs operations [filter]
+    node scripts/openapi-explore.mjs operation post /envelopes
+    node scripts/openapi-explore.mjs check-request get '/envelopes/<id>/deliverables?limit=20'
     node scripts/openapi-explore.mjs schema Place.PlaceInput
     node scripts/openapi-explore.mjs webhooks
+
+The explorer prints a compact Markdown contract view. Add `--json` only
+when another program needs structured output. `check-request` checks a
+candidate locally and never sends it to the API.
 
 `search_documentation` (MCP) answers the same questions in prose. Every docs
 page has a Markdown twin at `https://signatureapi.com/<slug>.md`.
@@ -190,10 +202,12 @@ the deliverable: the same flow written into the application.
    takes the file; `mint_upload_url` returns a URL to send the bytes to. Or
    call `POST /uploads` with the raw bytes and a `Content-Type` header. Each
    returns a temporary `url`. Accepted content types, the size limit and
-   the URL's lifetime are in `node scripts/openapi-explore.mjs path post /uploads`.
-   Before placing fields by coordinates, call `inspect_upload` on the upload.
-   It returns the page count, each page's size, and every `[[key]]`
-   placeholder found. `references/places.md` explains how to use it.
+   the URL's lifetime are in
+   `node scripts/openapi-explore.mjs operation post /uploads`.
+   Inspect the source document and list its bindings before defining places
+   or template data. PDF and DOCX support different binding syntax.
+   `references/places.md` gives the classification and reconciliation step.
+   Use `inspect_upload` when available to confirm what the service detected.
 2. **Create the envelope.** Print the minimum viable body with
    `node scripts/create-test-envelope.mjs --dry-run` and adapt it. The
    recipient defaults to `custom` authentication, so the Verify step below
@@ -206,9 +220,14 @@ the deliverable: the same flow written into the application.
    `references/verification-loop.md` explains the tradeoffs, including which
    method delivers the ceremony URL and why `custom` is the wrong choice for
    a real recipient. Every place's `recipient_key` must match a recipient's `key`.
-   Read `references/places.md` for how places bind to a document. Then
-   create it for real: re-run the same command without `--dry-run`. In a
-   test-mode MCP session, `create_envelope` with the adapted body works too.
+   Reconcile every document binding as `references/places.md` describes.
+   Fixed positions do not disable bindings already embedded in the file.
+   Keep generic fixture titles and messages plain. An account may reject
+   URL-like, phone-like, or numeric date content in `title` and `message`
+   unless its anti-phishing content capability is enabled. If the product
+   needs that content, record account enablement as a prerequisite instead
+   of silently removing it. Then create the envelope: re-run without
+   `--dry-run`. In a test-mode MCP session, `create_envelope` works too.
 3. **Handle events.** Register a test-mode webhook endpoint with
    `create_webhook`. Its signing secret is not returned. The tool names the
    dashboard page that shows it (`signing_secret_dashboard_url`). Ask the
@@ -231,8 +250,10 @@ the deliverable: the same flow written into the application.
 
 ## Verify
 
-The integration is done when a test-mode envelope has reached `completed` and
-you have observed the completion event.
+Provider completion is proven when the test envelope reaches `completed`,
+the completion event exists, and genuine deliverable bytes are retrieved.
+Application acceptance also requires those exact bytes to pass the
+retrieval, admission, and storage path from the approved design.
 
 Both branches below get the ceremony link straight from the create response.
 `node scripts/create-test-envelope.mjs` defaults to `custom` authentication,
@@ -269,7 +290,8 @@ Either branch, confirm with `list_events`. Pass the `envelope_id` and
 returns as soon as a new one arrives. When the response says `timed_out`,
 nothing new arrived yet; call it again. Do not sleep and poll by hand. Then
 call `get_deliverables` for the signed PDF and audit log with fresh URLs.
-Without MCP, the script does the same over REST:
+Before a REST fallback, check its concrete path and query values with
+`check-request`. Without MCP, the event watcher uses REST:
 
     node scripts/watch-events.mjs --envelope <envelope id>
 
@@ -280,15 +302,16 @@ Full detail on both branches: `references/verification-loop.md`.
 | Script | Does |
 | --- | --- |
 | `scripts/check-setup.mjs` | Credentials, mode and reachability |
-| `scripts/openapi-explore.mjs` | Query the spec: `paths`, `path <method> <path>`, `schema <name>`, `webhooks` |
+| `scripts/openapi-explore.mjs` | Read the API contract: `operations`, `operation`, `check-request`, `schema`, `webhooks` |
 | `scripts/make-test-document.mjs` | Build and upload a throwaway test PDF |
 | `scripts/create-test-envelope.mjs` | Print or create a minimum viable test envelope (`--auth` takes one or a comma-separated list of `custom`, `email_link`, `email_code`; default `custom`) |
 | `scripts/watch-events.mjs` | REST fallback for `list_events`: poll until the envelope reaches a terminal status (`--once` for a single check) |
 | `scripts/webhook-receiver.mjs` | Local receiver that prints arriving events |
 | `scripts/complete-ceremony.mjs` | Branch B browser walk (test mode only, no bypass) |
 
-Every script prints JSON. Failures are `{"ok": false, "code", "message", "next": [...]}`.
-`next` is the list of commands to run.
+Operational scripts print JSON. Their failures contain `code`, `message`,
+and `next`. The contract explorer prints Markdown by default and accepts
+`--json`. It labels local findings and states that no API request was sent.
 
 Branch B needs Playwright. It is deliberately not one of this skill's own
 dependencies: it is heavy, and only Branch B needs it. Install it before

@@ -66,6 +66,19 @@ export function collectCeremonyUrls(envelope, recipientKey) {
   return candidates.map((r) => r?.ceremony?.url).filter(Boolean);
 }
 
+/** The safe outcome when an email-link ceremony has no API-returned URL this script can verify. */
+export function ceremonyUrlUnavailable() {
+  return {
+    code: "CEREMONY_URL_NOT_RETURNED",
+    message:
+      "ceremony.url is null for this recipient. This is expected for email_link authentication because possession of the emailed link is the authentication, and this script cannot verify that private URL against the envelope.",
+    next: [
+      "Use Branch A: a human opens the link from the test email log and completes the ceremony",
+      "For an agent-driven test, create a separate custom-auth test envelope whose ceremony.url is returned by the API",
+    ],
+  };
+}
+
 /**
  * When both --envelope and --url are supplied, the envelope fetch alone only
  * proves the *id* is a visible test-mode envelope — it proves nothing about
@@ -257,10 +270,8 @@ if (import.meta.url === `file://${process.argv[1]}`) {
       const recipient = candidates.find((r) => r?.ceremony?.url);
 
       if (!recipient) {
-        fail("CEREMONY_URL_NOT_RETURNED", "ceremony.url is null for this recipient. It is null for email_link authentication (the API default) since possession of the emailed link is the recipient's authentication — and this script cannot read the email log itself.", [
-          "Read the link from the email log yourself: MCP list_emails --envelope <id>, then get_email, then re-run with --url",
-          "Or recreate the envelope with create-test-envelope.mjs, whose default custom authentication returns ceremony.url directly",
-        ]);
+        const unavailable = ceremonyUrlUnavailable();
+        fail(unavailable.code, unavailable.message, unavailable.next);
       }
       url = recipient.ceremony.url;
     }
