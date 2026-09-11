@@ -24,6 +24,18 @@ receives email, or what the user would call done.
   own data, turned into an envelope at send time.
 - Who initiates sending: a person clicking, or a system event.
 
+## API capability scope and account prerequisites
+
+- Inspect the current `Recipient.Type` and `Place.Type` schemas. In the design,
+  distinguish every provider-supported type from the subset included in this
+  product version. Give each deferred type a reason; do not turn examples or
+  defaults into provider limits.
+- Record account capabilities required by the approved experience. In
+  particular, anti-phishing content policy may reject URL-, phone-, or
+  numeric-date-like text in both the envelope `title` and `message`, even when
+  the JSON schema accepts the strings. If the product requires that content,
+  account enablement is a prerequisite; do not silently rewrite it.
+
 ## Authorization and tenant isolation
 
 - How the app decides that a user may act on a given signing.
