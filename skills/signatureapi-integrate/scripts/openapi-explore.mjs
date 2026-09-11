@@ -1,9 +1,7 @@
 #!/usr/bin/env node
-// Part of the SignatureAPI signatureapi-integrate skill. Queries the
-// published OpenAPI spec (operations, request checks, schemas, webhooks)
-// instead of reading the
-// full docs page. Test-mode tooling, not production code. Full workflow:
-// SKILL.md.
+// Part of the SignatureAPI signatureapi-integrate skill. Presents compact
+// operation, request-check, schema, and webhook views from the published
+// OpenAPI spec. It sends no API request. Full workflow: SKILL.md.
 const SPEC_URL = process.env.SIGNATUREAPI_SPEC_URL ?? "https://spec.signatureapi.com/openapi.yaml";
 
 /** Every webhook event type declared in the spec's top-level `webhooks`

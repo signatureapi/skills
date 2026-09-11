@@ -202,7 +202,8 @@ the deliverable: the same flow written into the application.
    takes the file; `mint_upload_url` returns a URL to send the bytes to. Or
    call `POST /uploads` with the raw bytes and a `Content-Type` header. Each
    returns a temporary `url`. Accepted content types, the size limit and
-   the URL's lifetime are in `node scripts/openapi-explore.mjs path post /uploads`.
+   the URL's lifetime are in
+   `node scripts/openapi-explore.mjs operation post /uploads`.
    Inspect the source document and list its bindings before defining places
    or template data. PDF and DOCX support different binding syntax.
    `references/places.md` gives the classification and reconciliation step.
