@@ -256,11 +256,12 @@ export function renderRequestCheckMarkdown(result) {
 
 export function renderOperationsMarkdown(operations, filter) {
   const title = filter ? `# Operations matching “${filter}”` : "# Public API operations";
-  if (operations.length === 0) return `${title}\n\nNo matching operations were found.`;
+  const notice = "No SignatureAPI operation was called; this view reads the OpenAPI contract.";
+  if (operations.length === 0) return `${title}\n\n${notice}\n\nNo matching operations were found.`;
   const rows = operations.map(
     (operation) => `| ${operation.name} | \`${operation.method} ${operation.path}\` | ${operation.summary} |`,
   );
-  return `${title}\n\n| Name | Operation | Purpose |\n| --- | --- | --- |\n${rows.join("\n")}\n\n${operations.length} operation${operations.length === 1 ? "" : "s"} found.`;
+  return `${title}\n\n${notice}\n\n| Name | Operation | Purpose |\n| --- | --- | --- |\n${rows.join("\n")}\n\n${operations.length} operation${operations.length === 1 ? "" : "s"} found.`;
 }
 
 async function loadSpec() {
@@ -313,7 +314,7 @@ async function main(argv) {
     const found = Boolean(schema);
     const data = { ok: found, name: args[0], required: schema?.required ?? [], properties: Object.keys(schema?.properties ?? {}), schema };
     const markdown = found
-      ? `# Schema: ${args[0]}\n\n## Required\n\n${data.required.length ? data.required.map((name) => `- \`${name}\``).join("\n") : "None."}\n\n## Properties\n\n${data.properties.length ? data.properties.map((name) => `- \`${name}\``).join("\n") : "None."}\n\n## Contract fragment\n\n\`\`\`json\n${JSON.stringify(schema, null, 2)}\n\`\`\``
+      ? `# Schema: ${args[0]}\n\nNo SignatureAPI operation was called; this view reads the OpenAPI contract.\n\n## Required\n\n${data.required.length ? data.required.map((name) => `- \`${name}\``).join("\n") : "None."}\n\n## Properties\n\n${data.properties.length ? data.properties.map((name) => `- \`${name}\``).join("\n") : "None."}\n\n## Contract fragment\n\n\`\`\`json\n${JSON.stringify(schema, null, 2)}\n\`\`\``
       : `# Local contract inspection: schema not found\n\nNo API request was sent.\n\nNo schema named \`${args[0]}\` is defined.`;
     printResult(data, markdown, json, !found);
     return;
@@ -321,7 +322,7 @@ async function main(argv) {
   if (mode === "webhooks") {
     const events = listWebhooks(spec, args[0]);
     const markdown = events.length
-      ? `# Webhook events${args[0] ? ` matching “${args[0]}”` : ""}\n\n${events.map((event) => `- \`${event.type}\` — ${event.summary ?? "No summary."}`).join("\n")}`
+      ? `# Webhook events${args[0] ? ` matching “${args[0]}”` : ""}\n\nNo SignatureAPI operation was called; this view reads the OpenAPI contract.\n\n${events.map((event) => `- \`${event.type}\` — ${event.summary ?? "No summary."}`).join("\n")}`
       : `# Local contract inspection: webhook not found\n\nNo API request was sent.\n\nNo webhook event matches \`${args[0] ?? ""}\`.`;
     printResult({ ok: events.length > 0, count: events.length, events }, markdown, json, events.length === 0);
     return;

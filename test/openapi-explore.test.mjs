@@ -143,6 +143,12 @@ test("renderOperationMarkdown leads with a local finding and says no API request
   assert.doesNotMatch(markdown, /OPERATION_NOT_FOUND/);
 });
 
+test("renderOperationsMarkdown identifies a local contract view", () => {
+  const markdown = explorer.renderOperationsMarkdown(explorer.listOperations(spec, "sender"), "sender");
+  assert.match(markdown, /^# Operations matching/);
+  assert.match(markdown, /No SignatureAPI operation was called/);
+});
+
 test("checkRequest matches a concrete path to its OpenAPI template", () => {
   assert.equal(typeof explorer.checkRequest, "function");
   const result = explorer.checkRequest(spec, "GET", "/envelopes/env_example/deliverables?limit=20");
