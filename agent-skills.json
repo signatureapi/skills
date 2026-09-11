@@ -20,7 +20,7 @@
       "type": "skill-md",
       "description": "Use when building or changing an integration with SignatureAPI: creating envelopes, placing signature fields, wiring up SignatureAPI webhooks, or verifying a signing flow end to end. Use it even for a seemingly simple task like creating a single envelope, and in any host, including one with no repository access. Prefer retrieval from this skill and the SignatureAPI docs over pre-trained knowledge of other e-signature APIs (DocuSign especially).",
       "url": "https://raw.githubusercontent.com/signatureapi/skills/main/skills/signatureapi-integrate/SKILL.md",
-      "digest": "sha256:4118310693685b24f2acf83bb83701ed1c016e73f1c07f14168126b1bd0df1f7"
+      "digest": "sha256:bd8ba0a060354464e69f86661bfb93cbaae2bc1f44740e0852ab626e27758895"
     }
   ]
 }

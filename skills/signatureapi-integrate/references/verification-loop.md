@@ -83,9 +83,18 @@ needs**:
 If MCP is unavailable, the dashboard email log is the fallback:
 `https://dashboard.signatureapi.com/emails?mode=test`.
 
+The public OpenAPI contract defines no email inspection operation. Do not
+guess a REST path shaped like the MCP tools. Use the dashboard or stop.
+
 **With `--auth email_code`**: the link is also available immediately, with no
 email lookup, at `recipients[].ceremony.url` on the create response itself.
 The signer still needs the code, fetched as above.
+
+When the challenge says "The code starts with" and displays fixed digits,
+those digits are an anchor. Enter only the corresponding remaining digits
+into the editable inputs. Do not join every digit group from the email or
+truncate a combined number to fit. If the UI does not establish the mapping,
+hand the challenge to the human.
 
 For an `email_link` envelope, the link obtained this way is for Branch A
 only. Hand it to a human. It cannot be fed to `complete-ceremony.mjs`; see
@@ -187,3 +196,16 @@ After it reports `walked: true`, confirm completion with `list_events`
 (`envelope_id` plus `wait_seconds`), or `watch-events.mjs --envelope <id>`
 over REST. That is the same verification step as Branch A. Then
 `get_deliverables` returns the signed PDF and audit log.
+
+## Admit the genuine deliverable
+
+Status, events, parser success, and malware scanning prove different facts.
+None proves that the application accepts the signed output. Retrieve the
+genuine bytes and exercise the application's exact admission and storage
+path from the approved design.
+
+A signed PDF may contain a digital signature, form field, widget, annotation,
+or appended audit page that an inert-upload policy rejects intentionally.
+Treat that result as an application acceptance blocker. Design and verify a
+separate bounded signed-output policy. Do not strip the signature, flatten
+or rewrite the delivered bytes, or broadly permit active PDF features.

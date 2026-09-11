@@ -18,31 +18,54 @@ The list of place types, the fields each type takes, and the constraints on
 recipient name and email). `Place.PlaceInput` names the schema for each type.
 If anything in this file and that output disagree, the spec wins.
 
-## Binding to a document
+## Inventory the document by format
+
+Read the source file or its extracted text before building the request.
+Classify every binding that SignatureAPI will interpret:
+
+| Format | Syntax | Meaning | Must match |
+| --- | --- | --- | --- |
+| PDF or DOCX | `[[place_key]]` | Current place placeholder | `places[].key` |
+| PDF or DOCX | `[[recipient_key.signature]]` | Legacy signature placeholder | `recipients[].key` |
+| PDF or DOCX | `fixed_positions[].place_key` | Coordinate position | `places[].key` |
+| DOCX only | `{{person.name}}` | Template value | The nested path in document `data` |
+| DOCX only | `{{if ...}}` and range tags | Template control | Compatible values and template structure |
+
+Curly-brace template syntax is not interpreted in PDF. A DOCX may combine
+template data with square-bracket place placeholders. Read the detailed
+[template](https://signatureapi.com/docs/api/resources/documents/templates)
+and [positioning](https://signatureapi.com/docs/api/resources/places/positioning)
+rules when either syntax is present.
+
+Before creation, report the bindings found, their request targets, and any
+unresolved item. Stop when any binding is unresolved. A current placeholder
+must match a place key exactly. A legacy signature placeholder uses its
+recipient key and does not become a current place automatically.
+
+## Position current places
 
 **Default: a `[[place_key]]` marker in the document text**, for example
-`[[signer_signature]]`. SignatureAPI finds the marker and places the field
-there. This is the default because it is verifiable. Open the document and
-you see exactly where the field will land. The marker survives most later
-edits to the document.
+`[[signer_signature]]`. The key matches one place object exactly.
+SignatureAPI replaces the marker with that rendered place. This is
+verifiable because its intended position remains visible in the source.
 
 **Fallback: `fixed_positions`.** Explicit `page`, `top` and `left`
 coordinates, in PDF points from the top-left corner of the page. Use this
 only when you cannot edit the document to add a marker, for example a
 third-party or generated PDF whose source you do not control. Coordinates
 guessed without a preview of the rendered result are a common source of
-misplaced fields. If you use `fixed_positions`, generate the envelope, then
-open the resulting document or a test render. Confirm placement before
-treating the integration as done.
+misplaced fields. Every fixed position's `place_key` must match a declared
+place. Fixed positions do not disable or replace other placeholders already
+embedded in the document. Generate the envelope, then open a test render and
+confirm placement.
 
 ## Read the document before placing anything
 
 Call `inspect_upload` (MCP) with the upload id from `mint_upload_url` or
-`POST /uploads`. It returns the page count, each page's width and height,
-and every `[[key]]` placeholder it found with its page and coordinates. Use
-it in three ways. Confirm a placeholder you rely on was detected. Confirm the
-page you are targeting exists and its size, before writing `fixed_positions`.
-Convert screen coordinates from a field-drawing UI into points on the real
-page size, never an assumed Letter or A4. The coordinates it returns use the
-same units and origin as `fixed_positions`. Without MCP,
-`GET /uploads/{uploadId}/structure` returns the same data.
+`POST /uploads`. Without MCP, first confirm and then call the exact REST
+operation `GET /uploads/{uploadId}/structure`. It returns page dimensions
+and bindings detected by the service.
+
+Compare its result with the local inventory. Reconcile every detected
+binding, not only the ones you planned to use. Before fixed positioning,
+confirm the target page and its real dimensions. Never assume Letter or A4.

@@ -1,11 +1,13 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import {
+import * as ceremony from "../skills/signatureapi-integrate/scripts/complete-ceremony.mjs";
+
+const {
   collectCeremonyUrls,
   extractCeremonyId,
   checkSuppliedUrlAgainstEnvelope,
   pollForRecipientCompletion,
-} from "../skills/signatureapi-integrate/scripts/complete-ceremony.mjs";
+} = ceremony;
 
 /** A ceremony URL shaped like the real ones: a JWT `token` query param whose
  * payload carries `ceremony_id`. Header/signature content doesn't matter for
@@ -83,6 +85,14 @@ test("checkSuppliedUrlAgainstEnvelope fails EMAIL_LINK_URL_UNVERIFIABLE when the
 
 test("checkSuppliedUrlAgainstEnvelope has no parameter that can let an unverifiable url through", () => {
   assert.equal(checkSuppliedUrlAgainstEnvelope.length, 3);
+});
+
+test("ceremonyUrlUnavailable sends email-link ceremonies to the human branch without suggesting --url", () => {
+  assert.equal(typeof ceremony.ceremonyUrlUnavailable, "function");
+  const result = ceremony.ceremonyUrlUnavailable();
+  assert.equal(result.code, "CEREMONY_URL_NOT_RETURNED");
+  assert.match(result.next.join("\n"), /Branch A/);
+  assert.doesNotMatch(result.next.join("\n"), /--url|re-run/);
 });
 
 // I1: pollForRecipientCompletion used to default to recipients[0] whenever
