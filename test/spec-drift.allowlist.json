@@ -9,9 +9,12 @@
     "upload_file": "attached-file upload on hosts that pass files to tools; mint_upload_url elsewhere"
   },
   "mcp_tools": [
+    "cancel_envelope",
     "create_ceremony",
     "create_envelope",
     "create_webhook",
+    "delete_envelope",
+    "delete_webhook",
     "get_deliverables",
     "get_email",
     "get_envelope",

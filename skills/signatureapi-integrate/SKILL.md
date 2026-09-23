@@ -32,12 +32,24 @@ mode only. Test keys start with `key_test_`.
 - **MCP** (`https://mcp.signatureapi.com/mcp`) inspects and exercises the
   API. Call `whoami` first. Tools that create or list take a `mode` that
   defaults to `test`; never pass `live`. If a create response ever shows
-  `live`, cancel that envelope at once and tell the user.
+  `live`, cancel that envelope at once and tell the user. Its tools, by
+  job:
+  - Documents: `upload_file` or `mint_upload_url`, `inspect_upload`.
+  - Envelopes: `create_envelope`, `get_envelope` (takes `envelope_id`),
+    `list_envelopes`, `cancel_envelope`, `delete_envelope` (final status
+    only; cancel first).
+  - Recipients: `resend_request`, `replace_recipient`, `create_ceremony`.
+  - Watching: `list_events`, `get_deliverables`, `list_emails`,
+    `get_email`.
+  - Webhooks: `list_webhooks`, `create_webhook`, `update_webhook`,
+    `test_webhook`, `list_webhook_attempts`, `delete_webhook`.
+  - Docs: `search_documentation`.
 - **The CLI** (`npx --yes signatureapi <command>`) handles secrets and
   local ports when you have a shell. `init` writes the test key to the
   env file. `listen` tunnels test webhooks to a local handler and writes
   their signing secret. `trigger <event type>` sends one example event.
-  Neither command prints a secret. Never run a CLI command with
+  `api-keys list --mode test` shows key metadata. No command prints a
+  secret. Never run a CLI command with
   `--mode live`.
 - **The scripts** here read the contract and drive a test envelope. See
   Scripts below.
@@ -122,7 +134,8 @@ Classify the request first.
 Build from what the user approved. Where it is silent on a technical
 choice, take the default from the architecture skill's decision matrix and
 say so. Keep the user's names for their concepts; SignatureAPI terms belong
-at the API boundary.
+at the API boundary. The product shapes a design may name are in
+`../signatureapi-architecture/references/product-shapes.md`.
 
 ## Orient in this codebase first
 
@@ -134,7 +147,11 @@ Find where signing belongs before writing anything:
 Steps 1–3 prove the flow against the test API. Step 4 is the deliverable.
 
 1. **Get a document URL.** For a throwaway PDF, run
-   `node scripts/make-test-document.mjs`. For the app's own files, read
+   `node scripts/make-test-document.mjs`. To upload a file while you work,
+   use your client's upload tool, or `POST /uploads` with the raw bytes and
+   a `Content-Type` header; each returns a temporary `url`. Accepted types,
+   the size limit and the URL's lifetime are in
+   `node scripts/openapi-explore.mjs operation post /uploads`. For the app's own files, read
    `references/documents.md` first; most failed envelopes come from the
    source file. List the document's bindings and reconcile each one with a
    place or template value, as `references/places.md` describes. Use
@@ -143,7 +160,9 @@ Steps 1–3 prove the flow against the test API. Step 4 is the deliverable.
    `node scripts/create-test-envelope.mjs --dry-run` and adapt it. Every
    place's `recipient_key` must match a recipient's `key`. The script
    defaults to `custom` authentication so verification needs no email;
-   `--auth` takes `email_link`, `email_code` or an ordered list.
+   `--auth` takes `email_link`, `email_code` or an ordered list:
+   `--auth email_link,email_code` keeps SignatureAPI emailing the link and
+   adds an emailed code.
    `references/verification-loop.md` explains which method delivers the
    link. Read `references/ceremonies.md` when the flow delivers links
    itself, embeds signing or has several recipients. Keep test titles and
