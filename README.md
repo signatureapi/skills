@@ -114,6 +114,10 @@ SignatureAPI CLI (`npx signatureapi init`, `listen`).
 
 Issues and pull requests are welcome: https://github.com/signatureapi/skills
 
+When a rewrite makes `test/spec-drift.test.mjs` report an unused allowlist entry, check whether the
+rewrite dropped that content before deleting the entry. Compare the backticked identifiers of the old
+and new skill (and its references); restore anything lost unintentionally.
+
 After changing a skill's `SKILL.md` frontmatter (name, description) or the
 package version, run `npm run manifests` and commit every regenerated manifest in the same
 change — `npm test` fails otherwise. That's every per-ecosystem plugin/marketplace manifest
