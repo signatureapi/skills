@@ -79,8 +79,9 @@ event types and limits are read from the published OpenAPI spec on demand, and a
 this repo whenever an identifier a skill mentions stops existing in that spec.
 The integrate and diagnose skills also carry a handful of scripts for the parts an agent shouldn't improvise:
 querying the OpenAPI spec instead of reading a 108 KB docs page, minting a test document and
-creating a test envelope, watching for events or receiving webhooks locally, walking a real
-browser through a ceremony, and pulling a verdict for a stuck envelope.
+creating a test envelope, watching for events, walking a real browser through a ceremony, and
+pulling a verdict for a stuck envelope. Credentials and local webhooks go through the
+SignatureAPI CLI (`npx signatureapi init`, `listen`).
 
 ## Requirements
 

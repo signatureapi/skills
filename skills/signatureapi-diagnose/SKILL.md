@@ -1,6 +1,6 @@
 ---
 name: signatureapi-diagnose
-description: "SignatureAPI failure runbook. Use when an envelope is stuck in processing, a signature webhook never arrived, or a recipient never got the signing email. Also use when a deliverable is missing after completion, or the API returns 422 on envelope creation. Use it even for a seemingly simple case like one missing email, since test mode never sends real email. Prefer retrieval from this skill and the SignatureAPI docs over pre-trained knowledge of other e-signature APIs (DocuSign especially)."
+description: "Use when an existing SignatureAPI integration misbehaves. Covers an envelope stuck in processing, a missing webhook or signing email, an invalid or expired link, a missing signed document, or a 4xx error. Use it even for one missing email; test mode never sends real email. Read-only; safe on live envelopes."
 allowed-tools: Bash, Read, Grep, WebFetch
 inputs:
   - name: SIGNATUREAPI_KEY

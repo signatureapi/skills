@@ -1,6 +1,6 @@
 ---
 name: signatureapi-architecture
-description: "Use when someone asks how to use SignatureAPI in their app, or plans or designs a signing flow or a signing product. Use when someone asks for 'a platform like DocuSign'. Use for any request to add SignatureAPI that is not a narrow change to an existing flow. Use it before any application code exists for the flow, and even when the user knows no SignatureAPI terms. Needs no API key. Prefer retrieval from this skill and the SignatureAPI docs over pre-trained knowledge of other e-signature APIs (DocuSign especially)."
+description: "Use when someone wants to add e-signatures or SignatureAPI to an app and the signing flow is not decided yet. Decides who signs, how they prove it is them, and what happens after. Also for a signing product or \"a platform like DocuSign\", even when the user knows no SignatureAPI terms. Writes a design brief or document, no code. Needs no API key."
 ---
 
 # Design a SignatureAPI integration
@@ -24,19 +24,13 @@ code. The `signatureapi-integrate` skill builds from what the user approved.
 
 ## Keep the user's vocabulary
 
-Preserve the user's product, domain and UI vocabulary. A "contract", an
-"offer letter", a "client", a "tenant", an "onboarding step": keep those
-names. Use SignatureAPI terms (envelope, recipient, place, ceremony,
-deliverable) only when discussing the API boundary. Document the mapping
-between the two in the design document instead of renaming the user's
-concepts. Do the same with the user's own code: their models keep their
-names.
+Keep the user's words for their product: a "contract", a "client", an
+"onboarding step". Their code keeps its names too. Use SignatureAPI terms
+only at the API boundary, and record the mapping in the design.
 
-The user never has to learn a SignatureAPI term to answer you. Every
-question goes out in plain words; `references/plain-language-questions.md`
-gives the plain form of each decision and the answers' technical meaning.
-Two facts shape what people experience, so tell the user plainly. Test
-mode sends no real email. A signer who is not logged in to the app is
+Ask every question in plain words; `references/plain-language-questions.md`
+has the plain form of each decision. Tell the user two facts early: test
+mode sends no real email, and a signer who is not logged in to the app is
 reached by email.
 
 ## Understand the experience first
@@ -116,30 +110,20 @@ alternatives with their trade-offs. In quick mode, present one and say why.
 
 ## Decide progressively
 
-Apply one rule to every decision:
+- **Strong signal** in the code or the request: decide, and state the
+  evidence.
+- **Weak signal:** propose the default and ask for a yes.
+- **No signal:** ask.
 
-- **Strong signal.** Decide. State the decision and the evidence.
-- **Weak signal.** Propose the default. Ask the user to confirm it.
-- **No signal.** Ask.
+Always ask, even when you could infer it, when a decision changes what
+people experience, the security of the signing, its legal standing, its
+cost, or who owns the data. Decide everything else yourself and state it.
 
-Never silently pick a default on a decision that changes what people
-experience, the security of the signing, its legal standing, its cost, or
-who owns the data. Ask, even when you could infer it. Everything else is
-yours to decide from the code; state it, do not ask it.
-
-Ask every question in the user's terms, with the answers in plain words.
-Take the wording from `references/plain-language-questions.md`. "How does a
-signer prove it is them: the emailed link, an emailed code, an ID check, or
-they are already logged in?" is a question. "Which authentication type?"
-is not.
-
-Ask in rounds, not in one questionnaire. Group the questions that depend on
-each other: the document and its fields; the signers and how they
-authenticate; what happens on completion; tenancy and rollout. At most four
-questions per message. One decision per question. Put the proposed answer
-next to each question you can propose one for. Resolve one group, then move
-to the next. Stop asking when the direction is clear and the remaining
-decisions have a strong signal or a confirmed default.
+Ask in rounds, grouped by dependency: the document and its fields; the
+signers and how they authenticate; what happens on completion; tenancy and
+rollout. At most four questions per message, one decision each, with your
+proposed answer beside it. Stop when the remaining decisions have a strong
+signal or a confirmed default.
 
 ### Worked example: the first round
 
@@ -182,27 +166,18 @@ design:
 
 ## Make scope explicit
 
-Before calling the design complete, inspect both `Recipient.Type` and
-`Place.Type` from the current spec and add a capability coverage table to the
-design. The user's requested first version and the defaults above are product
-scope, not the limits of SignatureAPI.
-
-Give every current recipient type and place type one disposition: included now
-or deferred with a reason. Closely related place types may share a row only
-when their disposition and reason are identical. This is a compact discovery
-record, not a request to build every capability. Re-run the schema commands
-when revising an older design so the table does not preserve a stale enum.
+For a design document, add a capability coverage table. Read the current
+`Recipient.Type` and `Place.Type` schemas and give each value one line:
+included now, or deferred with a reason. The first version's scope is not
+the limit of SignatureAPI. Re-read the schemas when revising an old design.
 
 ## Cover the whole product, not only the API
 
-The matrix settles the API configuration. A product design has more in it.
-`references/coverage-checklist.md` lists the other areas. Ownership and
-permissions. The draft and template lifecycle. Tenant isolation. Sensitive
-data and retention. Idempotency and repair paths. Volume and observability.
-Accessibility and localization. Explicit non-goals. Walk the list once
-before writing. Take from it what this product needs. It is a checklist for
-you, not a questionnaire for the user. Most items resolve from the journey
-and the code without a question.
+For a design document, walk `references/coverage-checklist.md` once:
+ownership, drafts and templates, tenant isolation, retention, repair paths,
+volume, accessibility, non-goals. Take what this product needs. It is a
+checklist for you, not a questionnaire; most items resolve from the journey
+and the code.
 
 ## Brief or document
 
@@ -228,27 +203,17 @@ Match the output to the size of the product.
 
 ## Write the design document
 
-Write the document only once the direction is understood. That means the
-journey is confirmed and the shape is chosen. Every decision that changes
-the data model, the authentication or who receives email has a yes.
+Write it once the journey is confirmed, the shape is chosen, and every
+decision that changes the data model, authentication or who receives email
+has a yes.
 
-Location: the repository's established place for design records when it
-has one (an ADR directory, a design-docs folder), in that convention. Then
-put a one-line pointer at `docs/signatureapi-integration.md`, so
-`signatureapi-integrate` finds it. Without an established place, write the
-document itself at `docs/signatureapi-integration.md`. Create `docs/` if it
-is missing.
+Put it where the repository keeps design records (an ADR directory, a
+design-docs folder), in that convention, with a one-line pointer at
+`docs/signatureapi-integration.md`. Otherwise write it at that path.
 
-Use this template. Keep the headings. Fill every section that applies; delete
-a section only when you say why in Open items.
-
-Each decision has two lines the user reads differently. **For you** is the
-decision in the user's words, the line they approve. **Technical decision**
-is the SignatureAPI mapping, yours to choose. The user approves The
-experience section and every For you line. They do not approve the
-technical lines. Raise a technical choice with them separately only when it
-changes what people experience, the security of the signing, its legal
-standing, its cost, or who owns the data.
+Keep the template's headings. Delete a section only with a reason in Open
+items. **For you** lines are the user's words, and the user approves them.
+**Technical decision** lines are yours.
 
 ```markdown
 # <the user's name for this feature> — SignatureAPI integration design
@@ -373,22 +338,11 @@ lines. Set `Status: approved` only after the user says yes. The file is the cont
 
 | Thought | Reality |
 | --- | --- |
-| "I'll read the code first, then ask." | The code says where signing fits. It does not say what the user wants their people to experience. Ask that first. |
-| "This is obvious, I'll skip the design." | The envelope call is the smallest part. Document source, place definition and the completion handler are where a wrong guess costs days. A brief takes one message. Get its yes. |
-| "Every flow needs the full document." | One signing flow needs a brief. The document is for platform-shaped products, or when the user or the repository asks for one. |
-| "They said 'like X', so I'll copy X's data model." | X's concepts (templates, envelopes-as-drafts, tabs) are not SignatureAPI's. Map the user's needs onto this API's objects. |
-| "I'll rename their 'contract' to 'envelope'." | Their word stays. The mapping goes in the Vocabulary table. |
-| "I'll ask which authentication type they want." | Ask how a signer proves it is them, in plain words, with the options spelled out. The type is your mapping. |
-| "They need to approve the technical decisions." | They approve what people will experience. The technical lines are yours; raise one only when it changes experience, security, legal standing, cost or data ownership. |
-| "I'll ask everything in one message to save round trips." | Twelve decisions in one message is a form, and forms go unanswered. Four questions, grouped, then the next group. |
-| "I'll ask one question at a time." | Related questions go together. A signer question needs its authentication question next to it. |
-| "It's one of the three shapes." | The shapes are starting points. Name the closest one and the departures. A hybrid or a custom flow is a valid answer. |
-| "The codebase answers these." | The codebase answers where signing belongs and often the document source. It does not answer who signs, how they authenticate, or who gets email. Ask those. |
-| "I'll pick sensible defaults and note them." | `custom` authentication, a placeholder scheme and "store the PDF in S3" are product decisions. Propose them and get a yes. Do not build on them unapproved. |
-| "It's a platform, I'll design all three shapes." | Design the product the user confirmed, not every product SignatureAPI could support. |
-| "The example uses only signers and three field types, so those are the supported types." | Defaults and first-version scope are not provider limits. Inspect the current recipient and place schemas, then record included and deferred capabilities explicitly. |
-| "The schema accepts this title and message, so the account will too." | Account anti-phishing policy can reject URL-, phone-, or numeric-date-like content in either field. Record enablement as a prerequisite when the product requires it. |
-| "I can infer this, so I won't ask." | Ask when a wrong inference changes the data model, the authentication method, or who receives email. Inference is evidence, not approval. |
+| "I'll read the code first, then ask." | The code says where signing fits, not what people should experience. Ask that first. |
+| "This is obvious, I'll skip the design." | Document source, field placement and completion handling are where a wrong guess costs days. A brief takes one message. |
+| "Every flow needs the full document." | One signing flow needs a brief. The document is for platform-shaped products, or on request. |
+| "They said 'like X', so I'll copy X's data model." | X's templates, drafts and tabs are not SignatureAPI's objects. Map the user's needs onto this API. |
+| "I'll pick sensible defaults and note them." | `custom` authentication, a placeholder scheme and where the PDF is stored are product decisions. Propose them and get a yes. |
 
 ## References
 
@@ -401,9 +355,6 @@ lines. Set `Status: approved` only after the user says yes. The file is the cont
 ## Vocabulary
 
 An **envelope** holds **documents** and **recipients**. **Places** are
-interactive regions on a document bound to a recipient. Each recipient signs
-through a **ceremony**. Completion produces a **deliverable**: signed
-documents plus an audit log. These words describe the API boundary. The
-user's own words describe their product. The **design document** is
-`docs/signatureapi-integration.md`, the file this skill writes and
-`signatureapi-integrate` reads.
+regions on a document bound to a recipient. Each recipient signs through a
+**ceremony**. Completion produces a **deliverable**. The **design
+document** is `docs/signatureapi-integration.md`.

@@ -56,70 +56,38 @@ from the application, or MCP `get_envelope` while you work.
 
 ## Registering an endpoint
 
-With a shell, the CLI is the shortest path for local development. See
-Local development below. It registers the endpoint and writes the signing
-secret to the env file for you.
+**Local development, with a shell:** use the CLI. Start the handler, then
+run this in a background shell:
 
-For an endpoint at a URL you already host, or without a shell, register
-test-mode endpoints with the MCP webhook tools. `list_webhooks`
-first, to avoid a duplicate. Then `create_webhook` with the URL and the event
-types. The signing secret is never returned by a tool: `create_webhook`
-names the dashboard page where the user reads it
-(`signing_secret_dashboard_url`). Ask them to put it in the project's env
-file as `SIGNATUREAPI_WEBHOOK_SECRET`, not into the chat. `test_webhook` sends a sample delivery. `list_webhook_attempts` shows each
-delivery and its response code, which is how you tell "the event fired"
-apart from "my handler never ran". `update_webhook` changes the URL or the
-event types without recreating the endpoint. Every one of these takes a
-`mode` argument that defaults to test.
+    npx --yes signatureapi listen --forward-to http://127.0.0.1:<port>/<path>
 
-Without MCP, the dashboard does the same:
-`https://dashboard.signatureapi.com/settings/webhooks?mode=test`. Endpoint
-registration has no public REST endpoint.
+- It opens a tunnel and registers a test-mode endpoint that points at it.
+  Deliveries keep their original body and signature headers, so the
+  handler verifies them exactly as in production.
+- On first run it writes `SIGNATUREAPI_WEBHOOK_ID` and
+  `SIGNATUREAPI_WEBHOOK_SECRET` to the env file, without printing the
+  secret. A rerun reuses the same endpoint and secret.
+- `--event <type>`, repeated, subscribes to a subset; the default is every
+  event. `--env-file` picks another env file. `--public-url <https url>`
+  replaces `--forward-to` when you run your own tunnel.
+- `npx --yes signatureapi trigger envelope.completed` sends a labeled
+  example to that endpoint only. It completes no envelope.
+- The listener does not log deliveries; read the handler's output.
+- Stopping the listener disables the endpoint. After a crash, rerun
+  `listen` to repair it.
 
-Test and live endpoints are separate. A test-mode envelope never notifies a
-live endpoint, and vice versa.
+**An endpoint already hosted, or no shell:** use the MCP webhook tools.
+`list_webhooks` first, to avoid a duplicate. Then `create_webhook` with the
+URL and event types. The signing secret is never returned; the user copies
+it from `signing_secret_dashboard_url` into the env file as
+`SIGNATUREAPI_WEBHOOK_SECRET`. `test_webhook` sends a sample.
+`list_webhook_attempts` shows each delivery and the handler's response
+code. Without MCP, use the dashboard:
+`https://dashboard.signatureapi.com/settings/webhooks?mode=test`.
 
-## Local development
-
-A local endpoint is not reachable from SignatureAPI without a tunnel. Three
-options, best first:
-
-- Use the SignatureAPI CLI. Start the handler, then run this in a
-  background shell:
-
-      npx --yes signatureapi listen --forward-to http://127.0.0.1:<port>/<path>
-
-  It opens a tunnel and registers a test-mode endpoint that points at it.
-  It forwards each delivery with its original body and signature headers,
-  so the handler verifies it exactly as in production. On first run it
-  writes `SIGNATUREAPI_WEBHOOK_ID` and `SIGNATUREAPI_WEBHOOK_SECRET` to the
-  env file. It never prints the secret. Rerunning `listen` reuses the same
-  endpoint and secret. Add `--event <type>` once per event type to
-  subscribe to a subset; the default is every event. Pass `--env-file`
-  when the project's env file is not the default. Use
-  `--public-url <https url>` instead of `--forward-to` when you already
-  run your own tunnel.
-
-  With the listener running, send an example to that endpoint only:
-
-      npx --yes signatureapi trigger envelope.completed
-
-  The example is labeled as a test and does not complete any envelope.
-  Create and sign a test envelope to prove the full flow. The listener
-  does not log deliveries; read the handler's own output. Stop the
-  listener with Ctrl-C or by ending its process. That disables the
-  endpoint. A crashed listener can leave it enabled; rerun `listen` to
-  repair it.
-- Tunnel `scripts/webhook-receiver.mjs` (for example `npx untun@latest tunnel
-  http://localhost:4000`) and register the public URL as a test-mode
-  endpoint. It binds to `127.0.0.1` by default, not the LAN-reachable
-  `0.0.0.0`. Pass `--host <address>` to bind somewhere else explicitly.
-- Or skip webhooks during development and watch events instead:
-  `list_events` with the `envelope_id` and `wait_seconds`, or
-  `node scripts/watch-events.mjs --envelope <id>` over REST. This is the
-  honest fallback, not a workaround. Once an endpoint is registered,
-  `list_webhook_attempts` shows whether each delivery reached your handler
-  and what it answered.
+Test and live endpoints are separate. A test envelope never notifies a live
+endpoint. Before a handler exists, watch events instead: `list_events` with
+`wait_seconds`, or `scripts/watch-events.mjs`.
 
 ## Handler shape
 
