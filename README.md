@@ -57,6 +57,20 @@ to remove a plugin-owned server. If you want the skills without the MCP server, 
 Working directly in this repo also picks up the MCP server via the checked-in root `.mcp.json` —
 the same file the Claude Code and Grok Build plugins install elsewhere.
 
+## Update
+
+New skill content reaches existing installs through each client's update command. Only Codex
+(on startup) and Cursor (when an admin enables Auto Refresh) update on their own.
+
+| Ecosystem | Update |
+|---|---|
+| Claude Code | `/plugin marketplace update signatureapi`, then `/plugin update signatureapi@signatureapi`, then `/reload-plugins` |
+| Codex | Automatic on startup, or `codex plugin marketplace upgrade signatureapi` |
+| Cursor | **Dashboard → Plugins → Refresh** on the marketplace, or enable Auto Refresh |
+| Grok Build | `grok plugin marketplace update`, then `grok plugin update` |
+| Gemini CLI | `gemini extensions update signatureapi`, then restart Gemini CLI |
+| `npx skills` | `npx skills update` |
+
 ## Skills
 
 - **[signatureapi-architecture](skills/signatureapi-architecture)** — decide how your app should
@@ -113,6 +127,11 @@ SignatureAPI CLI (`npx signatureapi init`, `listen`).
 ## Contributing
 
 Issues and pull requests are welcome: https://github.com/signatureapi/skills
+
+To release, bump `version` in `package.json` and run `npm run manifests`, so every manifest
+carries the new version. Claude Code keeps existing installs on the cached version until that
+number changes. Do not publish GitHub Releases: once one exists, Gemini CLI installs follow
+release tags instead of the default branch.
 
 When a rewrite makes `test/spec-drift.test.mjs` report an unused allowlist entry, check whether the
 rewrite dropped that content before deleting the entry. Compare the backticked identifiers of the old
