@@ -35,7 +35,8 @@ skill's scripts. Both exist for you while you work, not for the app at
 runtime. Test keys start with `key_test_`. **This skill works in test mode
 only.**
 
-**What you use while working: MCP, the spec, and the scripts here.** The
+**What you use while working: MCP, the CLI, the spec, and the scripts
+here.** The
 SignatureAPI MCP server is at `https://mcp.signatureapi.com/mcp`. Use it
 first to inspect and exercise the API as you build and verify. Use a tool
 before hand-writing a request. Its tools, by job:
@@ -53,6 +54,22 @@ before hand-writing a request. Its tools, by job:
 - Docs: `search_documentation` (a `page` argument returns one docs page in
   full).
 
+The SignatureAPI CLI (`npx --yes signatureapi <command>`) handles the jobs
+that involve a secret or a local port. Use it whenever you have a shell:
+
+- `init` writes the account's test key into the project's env file. It
+  never prints the key.
+- `listen` registers a test-mode webhook endpoint, tunnels it to a local
+  handler, and writes the endpoint's signing secret into the env file.
+- `trigger <event type>` sends one example event to the endpoint `listen`
+  opened.
+- `api-keys list --mode test` shows key metadata, never key values.
+
+The CLI talks to the user's account, not the application. Like MCP, it is
+never a runtime dependency of the app. This skill uses its test-mode
+commands only. Do not run a command with `--mode live`. Pass `--yes` to
+`npx` so it never stops to confirm the download.
+
 `get_envelope` takes `envelope_id`, not `id`. A missing MCP tool does not
 prove that a same-purpose REST operation exists. Confirm the exact method
 and path first:
@@ -65,18 +82,13 @@ point the user at https://github.com/signatureapi/skills/issues/new. Test
 email inspection is an MCP or dashboard capability, not an established
 public REST fallback.
 
-**MCP mode is per session, not per call.** Call `whoami` first. The session
-acts in live mode when `modes.live` is true and the account is active.
-Otherwise it acts in test mode. Envelope creation and every listing follow
-the session mode. Reads by id (`get_envelope`, `list_events` with an
-`envelope_id`, `get_deliverables`) work on either mode. Webhook tools take a
-`mode` argument. **Never call `create_envelope` until `whoami` has shown
-the session is in test mode.** A live envelope emails a real person and is
-binding. When `whoami` is not listed, or shows a live session, create test
-envelopes with the scripts instead: they run with your `key_test_` key and
-cannot reach live mode. Then read the test envelope by id through MCP. If
-a `create_envelope` response ever shows `mode: live`, cancel it at once and
-tell the user what was sent.
+**MCP acts in test mode unless you ask for live.** Call `whoami` first.
+`create_envelope`, `list_envelopes` and the webhook tools take a `mode`
+argument that defaults to `test`. Leave it at the default. This skill
+never passes `live`. Reads by id (`get_envelope`, `list_events` with an
+`envelope_id`, `get_deliverables`) work on either mode. Check the `mode`
+in every create response. If one ever shows `live`, cancel that envelope
+at once and tell the user what was sent.
 
 ## Know your host
 
@@ -86,11 +98,11 @@ a shell. Check what you actually have, and adapt:
 - **A tool that takes an attached file** (`upload_file`) → use it for
   documents. **A tool that returns an upload URL** (`mint_upload_url`) →
   send the bytes to that URL yourself. Exactly one of the two is listed.
-- **A writable project filesystem** → the user puts the test key in the
-  project's gitignored env file, as Setup describes, and the scripts read
-  it from there. **No filesystem** → do not ask for the key and do not
-  print it; every MCP call is already authenticated.
-- **A shell** → the bundled scripts run. **No shell** → the MCP tools cover
+- **A writable project filesystem** → the test key goes in the project's
+  gitignored env file, as Setup describes, and the scripts read it from
+  there. **No filesystem** → do not ask for the key and do not print it;
+  every MCP call is already authenticated.
+- **A shell** → the CLI and the bundled scripts run. **No shell** → the MCP tools cover
   the same steps: `whoami`, an upload tool, `create_envelope`, the webhook
   tools, `list_events`, `get_deliverables`.
 - **No repository access** (a chat host such as ChatGPT) → design the flow
@@ -127,33 +139,54 @@ page has a Markdown twin at `https://signatureapi.com/<slug>.md`.
 
 Get a test key into the project without it crossing the chat. No MCP tool
 returns a credential: a tool result lands in the transcript, and the model,
-not a person, decides to read it. The user fetches secrets from the
+not a person, decides to read it. The CLI writes secrets straight into the
+env file instead. Without a shell, the user fetches them from the
 dashboard.
 
 1. Call `whoami`. Note the account, and whether a test key already exists
    (`test_api_key.exists`).
-2. Ask the user to create or copy a test key (`key_test_…`) on the
-   dashboard's API keys page, `https://dashboard.signatureapi.com/settings/api-keys`,
-   and to put it in the project's gitignored env file as `SIGNATUREAPI_KEY`.
-   Say which file and which variable name. Never ask them to paste the key
-   into the chat. If you come across it, never echo it or write it into
-   code, a commit, a log, or a tool argument.
-3. Install this skill's one dependency, then check the setup:
+2. **With a shell**, run the CLI from the application directory:
+
+        npx --yes signatureapi init
+
+   It prints a verification URL and a user code, then waits. Give both to
+   the user and ask them to sign in and approve. Run the command where it
+   can keep waiting, such as a background shell. After approval it writes
+   the existing test key to the env file as `SIGNATUREAPI_KEY`. Next.js
+   projects get `.env.local`; other projects get `.env`. Pass
+   `--env-file <path>` or `--var <name>` to match the project's
+   conventions. It never creates or rolls a key, and never prints one.
+   The CLI keeps its sign-in in the OS keychain. On a host without one,
+   pass `--credential-store file` to this and every later CLI command.
+   Confirm the env file is gitignored.
+
+   **Without a shell**, or when the user prefers it, ask the user to copy
+   the test key (`key_test_…`) from the dashboard's API keys page,
+   `https://dashboard.signatureapi.com/settings/api-keys`. Ask them to put
+   it in the project's gitignored env file as `SIGNATUREAPI_KEY`. Say which
+   file and which variable name.
+
+   Either way, never ask the user to paste the key into the chat. If you
+   come across the key, never
+   echo it or write it into code, a commit, a log, or a tool argument.
+3. Install this skill's one dependency, then check the setup. Run the
+   scripts from this skill's directory. Load the project's env file with
+   Node's `--env-file` flag, so the key reaches the script without being
+   printed:
 
         npm i                              # inside this skill directory
-        node scripts/check-setup.mjs
+        node --env-file=<project env file> scripts/check-setup.mjs
+
+   Every script below takes the same flag. Do not `cat`, `source` or
+   `export` the env file; that prints the key into the transcript.
 
 Read `SIGNATUREAPI_KEY` from the environment only. Never pass it as a
 command-line argument. Argv is exposed in shell history and process listings
 on any shared or logged system.
 
-Two variables override where these scripts point: `SIGNATUREAPI_BASE_URL`
-(default `https://api.signatureapi.com/v1`) and `SIGNATUREAPI_SPEC_URL`
-(default `https://spec.signatureapi.com/openapi.yaml`, read by
-`openapi-explore.mjs`). Set either only to a host you trust. Every script
-sends `SIGNATUREAPI_KEY` as the `X-API-Key` header to whatever host is
-configured. There is no host allowlist to catch a typo or a compromised
-value.
+`SIGNATUREAPI_BASE_URL` and `SIGNATUREAPI_SPEC_URL` override where the
+scripts point. Leave them unset. The scripts send the key to whatever host
+they name.
 
 ## Start from the design
 
@@ -161,22 +194,24 @@ Classify the request first.
 
 - **A narrow change to an existing flow.** One more place, one more event
   handled, a bug fixed. Go to Orient and Build.
-- **A change to who signs, how they authenticate, or who receives email.**
-  Update the design document first, with the user's yes, then build. The
-  `signatureapi-architecture` skill owns those decisions.
-- **Anything else.** A new signing flow, a new product surface, "a platform
-  like X". The design document must exist in this repository and the user
-  must have approved it. It lives at `docs/signatureapi-integration.md`, or
-  that file points to where it lives. If it does not exist, stop. Run the
-  `signatureapi-architecture` skill (it ships in the same install) and come
-  back with the approved design. Do not ask the design questions here. Do
-  not build without the file.
+- **One new signing flow, or a change to who signs, how they
+  authenticate, or who receives email.** Get a design brief approved in
+  chat, then build. `signatureapi-architecture` writes the brief: a few
+  plain lines, one yes. When a design document already exists, update it
+  instead.
+- **A platform-shaped product.** Users send their own documents, draw their
+  own fields, or send in their own name; or "a platform like X". The
+  design document must exist at `docs/signatureapi-integration.md` (or
+  that file points to it) and be approved. If it does not exist, run
+  `signatureapi-architecture` first and build only from the approved file.
+  The same applies whenever the user asks for a design document.
 
-Build reads the design file. Each decision there has a For you line the
-user approved and a Technical decision line that is yours. Build from the
-technical lines: the document input path, the places, the recipients, the
-authentication, the ceremony delivery, the completion handling and the
-rollout. Do not guess any of them. Use the design's own names for the
+Build from what the user approved, brief or document: the document input
+path, the places, the recipients, the authentication, the ceremony
+delivery, the completion handling and the rollout. Where the brief is
+silent on a technical choice, take the default from the architecture
+skill's decision matrix and say so. A document's Technical decision lines
+are yours to build from. Use the design's own names for the
 user's concepts, and talk to the user in those names. SignatureAPI terms belong at the API
 boundary; the design document's vocabulary section maps one to the other.
 The common product shapes the design may name are described in
@@ -228,20 +263,35 @@ the deliverable: the same flow written into the application.
    needs that content, record account enablement as a prerequisite instead
    of silently removing it. Then create the envelope: re-run without
    `--dry-run`. In a test-mode MCP session, `create_envelope` works too.
-3. **Handle events.** Register a test-mode webhook endpoint with
-   `create_webhook`. Its signing secret is not returned. The tool names the
-   dashboard page that shows it (`signing_secret_dashboard_url`). Ask the
-   user to copy it into the project's env file as
-   `SIGNATUREAPI_WEBHOOK_SECRET`, the same way as the API key. Run `node scripts/webhook-receiver.mjs` for a local receiver to point it
-   at. Send a sample delivery with `test_webhook`, then confirm a 2xx with
-   `list_webhook_attempts`. Handle at least `envelope.completed`. The full
-   event list, the handler shape and the local-dev alternative are in
-   `references/webhooks.md`.
+3. **Handle events.** Handle at least `envelope.completed`. **With a
+   shell**, start the app's webhook handler (or
+   `node scripts/webhook-receiver.mjs` before the handler exists). Then run
+   the CLI in a background shell:
+
+        npx --yes signatureapi listen --forward-to http://127.0.0.1:<port>/<path>
+
+   It registers a test-mode endpoint and tunnels it to that local URL. It
+   writes `SIGNATUREAPI_WEBHOOK_ID` and `SIGNATUREAPI_WEBHOOK_SECRET` to the
+   env file and never prints the secret. Wait until it reports that it is
+   ready. Send an example with
+   `npx --yes signatureapi trigger envelope.completed`. The listener does
+   not log deliveries, so check the handler's own output for the event and
+   a 2xx answer. A real test envelope then reaches the same handler. Stop the listener when you are done; that disables the
+   endpoint.
+
+   **Without a shell**, register the endpoint with `create_webhook`. Its
+   signing secret is not returned. The tool names the dashboard page that
+   shows it (`signing_secret_dashboard_url`). Ask the user to copy it into
+   the project's env file as `SIGNATUREAPI_WEBHOOK_SECRET`, the same way as
+   the API key. Send a sample delivery with `test_webhook`, then confirm a
+   2xx with `list_webhook_attempts`. The full event list, the handler shape
+   and the local-dev options are in `references/webhooks.md`.
 4. **Write it into the application.** Use the codebase's own HTTP client and
    conventions, found in Orient above. Implement three things. First, the
    `POST /envelopes` call with the body you proved in step 2, triggered where
    the domain action happens. Second, the webhook handler from step 3,
-   mounted on the app's existing inbound-HTTP path. Third, **persistence of
+   mounted on the app's existing inbound-HTTP path. It verifies the
+   signature before anything else; `references/webhooks.md` has the code. Third, **persistence of
    the envelope id** against the domain object that motivated the signature.
    Read the key from the app's configuration; never hard-code it. Do not
    copy this skill's scripts into the app. Do not make the app call the MCP
@@ -278,12 +328,7 @@ Playwright — see the Scripts table below):
 The browser walk completes envelopes whose places are signature places. That
 is what `create-test-envelope.mjs` produces. For an envelope containing
 `initials` or any other place type, use Branch A instead; see
-`references/verification-loop.md` for why. No flag gates this branch, and
-none should be added. An agent runs non-interactively. Any check a flag could
-enforce is one the agent could satisfy on its own by passing it. A flag
-shaped like a consent gate would suggest that something is enforced when
-nothing is. What keeps this branch safe is structural: the script cannot run
-against a live key at all, because `requireTestKey` has no bypass path.
+`references/verification-loop.md` for why. The script refuses a live key.
 
 Either branch, confirm with `list_events`. Pass the `envelope_id` and
 `wait_seconds: 20`. The server re-reads the events every two seconds and

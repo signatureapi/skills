@@ -8,14 +8,14 @@ description: "Use when someone asks how to use SignatureAPI in their app, or pla
 ## Purpose
 
 Understand what the user wants their people to experience. Then decide how
-SignatureAPI delivers it. Write the design document and get an explicit yes.
-This skill writes no application code. The `signatureapi-integrate` skill
-builds from the document this skill writes.
+SignatureAPI delivers it. Write a design brief or a design document, sized
+to the product, and get an explicit yes. This skill writes no application
+code. The `signatureapi-integrate` skill builds from what the user approved.
 
 ## When to reach for something else
 
 - **Building against an approved design** belongs to `signatureapi-integrate`.
-  It requires the file this skill writes.
+  It builds from the approved brief or document.
 - **Diagnosing an integration that already exists** belongs to
   `signatureapi-diagnose`.
 - **A different e-signature vendor** (DocuSign, Dropbox Sign, Adobe Sign, etc.)
@@ -204,6 +204,28 @@ before writing. Take from it what this product needs. It is a checklist for
 you, not a questionnaire for the user. Most items resolve from the journey
 and the code without a question.
 
+## Brief or document
+
+Match the output to the size of the product.
+
+- **One signing flow** (a document, its signers, what happens after) → a
+  design brief in chat. Write no file. Start with the journey in one
+  sentence. Then give one plain line for each of these:
+  - where the document comes from
+  - who signs, in what order
+  - how a signer proves it is them
+  - where they sign
+  - what happens when everyone has signed
+  - trying it in test mode first
+
+  Take the wording from `references/plain-language-questions.md`.
+  Ask for an explicit yes. Then hand over to `signatureapi-integrate`.
+- **A platform-shaped product** (users send their own documents, draw
+  their own fields, or send in their own name; many tenants; "a platform
+  like X") → the design document below.
+- **The user asks for a document**, or the repository keeps design
+  records for features like this → the design document below.
+
 ## Write the design document
 
 Write the document only once the direction is understood. That means the
@@ -352,7 +374,8 @@ lines. Set `Status: approved` only after the user says yes. The file is the cont
 | Thought | Reality |
 | --- | --- |
 | "I'll read the code first, then ask." | The code says where signing fits. It does not say what the user wants their people to experience. Ask that first. |
-| "This is obvious, I'll skip the document." | The envelope call is the smallest part. Document source, place definition and the completion handler are where a wrong guess costs days. Write the document. |
+| "This is obvious, I'll skip the design." | The envelope call is the smallest part. Document source, place definition and the completion handler are where a wrong guess costs days. A brief takes one message. Get its yes. |
+| "Every flow needs the full document." | One signing flow needs a brief. The document is for platform-shaped products, or when the user or the repository asks for one. |
 | "They said 'like X', so I'll copy X's data model." | X's concepts (templates, envelopes-as-drafts, tabs) are not SignatureAPI's. Map the user's needs onto this API's objects. |
 | "I'll rename their 'contract' to 'envelope'." | Their word stays. The mapping goes in the Vocabulary table. |
 | "I'll ask which authentication type they want." | Ask how a signer proves it is them, in plain words, with the options spelled out. The type is your mapping. |

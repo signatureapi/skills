@@ -45,15 +45,10 @@ Identifiers named below (paths, event types, status codes) are illustrations.
 The published spec at `https://spec.signatureapi.com/openapi.yaml` is the
 source of truth, and wins if the two disagree.
 
-This skill is read-only by construction. Every script issues GET requests
-only. `test/diagnose-read-only.test.mjs` enforces that with a check against
-every script under this skill. `allowed-tools` above still lists `Bash`,
-since the scripts need it to run. An agent with Bash access could issue any
-request it wanted. What keeps this skill read-only is that no script here
-writes anything. Because of that, it runs against either a test or a live
-key with no flag needed. Reading a production envelope during an incident is
-exactly the behaviour wanted here. Every script reports which mode (`test`
-or `live`) it ran in, so that is never left ambiguous.
+This skill only reads. Every script issues GET requests, so it is safe
+against a live key during an incident. Each script reports the mode it ran
+in. Run a script with `node --env-file=<project env file> scripts/…` so the
+key loads without being printed.
 
 The repair is a separate decision. Once the verdict is clear, name the fix
 and ask before applying it. `resend_request` for a signer who lost the
@@ -77,7 +72,11 @@ Split the question in two. Did the event happen? `list_events` with the
 `list_webhook_attempts` for the endpoint shows each delivery and the
 response code your handler returned. No attempt means the endpoint is not
 subscribed to that event type, or is in the other mode. A non-2xx attempt
-means your handler ran and failed. Test and live endpoints are separate. A
+means your handler ran and failed. A 401 or 400 on every attempt usually
+means signature verification fails. Check three things: the handler
+verifies the raw body, not re-serialized JSON; it reads the `webhook-id`,
+`webhook-timestamp` and `webhook-signature` headers; and its secret belongs
+to this endpoint and mode. Test and live endpoints are separate. A
 test envelope never notifies a live endpoint.
 
 ### Recipient never got the email

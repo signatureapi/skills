@@ -87,6 +87,10 @@ browser through a ceremony, and pulling a verdict for a stuck envelope.
 - A SignatureAPI key in the `SIGNATUREAPI_KEY` environment variable. Read from the environment
   only — never pass it as a command-line argument, since argv is exposed in shell history and
   process listings on any shared or logged system.
+  `npx signatureapi init` writes your test key to the project's env file after you sign in in
+  the browser, without printing it. Or copy it from the dashboard's API keys page.
+- For local webhooks, `npx signatureapi listen --forward-to <local url>` registers a test-mode
+  endpoint, tunnels it to your handler, and writes its signing secret to the env file.
 - Node.js 22 or later.
 
 ## Safety
