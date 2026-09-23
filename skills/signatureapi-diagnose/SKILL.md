@@ -94,6 +94,21 @@ Check for a `deliverable.generated` event, then `get_deliverables` (or
 `GET /envelopes/{envelopeId}/deliverables`). A `pending` or `processing`
 status means not yet, not missing.
 
+### "Invalid link" or an expired link
+Creating a ceremony revokes every earlier link for that recipient. Look for
+code that creates ceremonies more than once: a retried webhook handler, or
+an email scanner opening a link that creates one on open. Links also expire,
+after 30 days by default. The fix is a fresh link (`create_ceremony` or a
+resend). Ask before applying it.
+
+### Envelope creation rejects the document
+- The URL host is not a supported storage host: upload the file instead.
+- "Could not be parsed as a PDF" on a DOCX: `format` is missing.
+- A DOCX from Google Docs, LibreOffice or a DOCX library fails to parse:
+  re-save it in Microsoft Word.
+- A placeholder is "not found" in a PDF printed from HTML: ligatures or
+  zero-width characters split the marker text.
+
 ### 422 on create
 See `references/errors.md` for the response shape and the most common cause.
 Check the exact schema with `search_documentation` (MCP) or the OpenAPI spec at

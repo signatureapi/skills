@@ -228,7 +228,9 @@ signals to grep for, and the two mistakes that are easy to make.
 Steps 1–3 prove the flow against the test API using your own tools. Step 4 is
 the deliverable: the same flow written into the application.
 
-1. **Get a document URL.** Documents are referenced by URL. For a throwaway
+1. **Get a document URL.** Documents are referenced by URL. Read
+   `references/documents.md` before using the app's own files: most
+   failed envelopes come from the source file. For a throwaway
    test document, run `node scripts/make-test-document.mjs`. It uploads one
    and returns its URL. Start here; do not improvise a PDF or an upload
    flow. In the application, the preferred source is a signed or public
@@ -243,7 +245,9 @@ the deliverable: the same flow written into the application.
    or template data. PDF and DOCX support different binding syntax.
    `references/places.md` gives the classification and reconciliation step.
    Use `inspect_upload` when available to confirm what the service detected.
-2. **Create the envelope.** Print the minimum viable body with
+2. **Create the envelope.** Read `references/ceremonies.md` when the flow
+   delivers links itself, embeds signing, or has several recipients.
+   Print the minimum viable body with
    `node scripts/create-test-envelope.mjs --dry-run` and adapt it. The
    recipient defaults to `custom` authentication, so the Verify step below
    never needs an email lookup. Pass `--auth email_link` for the API's own
@@ -263,7 +267,8 @@ the deliverable: the same flow written into the application.
    needs that content, record account enablement as a prerequisite instead
    of silently removing it. Then create the envelope: re-run without
    `--dry-run`. In a test-mode MCP session, `create_envelope` works too.
-3. **Handle events.** Handle at least `envelope.completed`. **With a
+3. **Handle events.** Handle at least `envelope.completed` and
+   `deliverable.generated`; fetch the signed file on the second. **With a
    shell**, start the app's webhook handler (or
    `node scripts/webhook-receiver.mjs` before the handler exists). Then run
    the CLI in a background shell:
@@ -367,6 +372,8 @@ install chromium`.
 
 - `references/places.md` — how places bind to a document (types come from the spec)
 - `references/webhooks.md` — registering an endpoint and the handler shape
+- `references/documents.md` — file sources, DOCX and PDF traps, generated PDFs
+- `references/ceremonies.md` — link lifecycle, embedding, recipients after creation, live-mode email
 - `references/brownfield-placement.md` — where signing belongs in an existing codebase
 - `references/verification-loop.md` — both verification branches in full
 

@@ -11,10 +11,23 @@ the spec's `webhooks` section. Read it from there, not from memory:
 
     node scripts/openapi-explore.mjs webhooks
 
-This skill's workflow depends on these: `envelope.completed` (the minimum a
-handler must process), `deliverable.generated` (signed documents ready), and
-`recipient.soft_bounced` / `recipient.hard_bounced` (live-mode email delivery
-failures). If this file and the spec disagree, the spec wins.
+This skill's workflow depends on these:
+
+- `envelope.completed`: everyone has finished. Mark the domain row.
+- `deliverable.generated`: the signed file is ready. Fetch and store it
+  here, not on `envelope.completed`, which can arrive first.
+- `recipient.rejected`: a signer declined. The envelope is not cancelled
+  for you.
+- `recipient.soft_bounced` / `recipient.hard_bounced`: live-mode email
+  delivery failures.
+
+If this file and the spec disagree, the spec wins.
+
+Events carry ids, not content. Captured input values (`capture_as`) are
+not in any event; read them from the envelope. Deliverable download URLs
+expire after an hour. Download the file and store it in the app's own
+storage at once. Fetch a fresh URL later with `get_deliverables` or
+`GET /envelopes/{envelopeId}/deliverables`.
 
 ## Event payload shape
 
