@@ -14,5 +14,6 @@
     "signatureapi-diagnose",
     "signatureapi-integrate"
   ],
-  "mcpServers": "./.mcp.json"
+  "mcpServers": "./.mcp.json",
+  "hooks": "./hooks/claude-hooks.json"
 }

@@ -1,0 +1,17 @@
+{
+  "description": "SignatureAPI readiness check at session start.",
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/session-start.mjs\" --host claude",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -17,6 +17,11 @@
 // of how many ecosystems install it. Only the MCP *dialect* differs per
 // ecosystem (filename and JSON shape), which is why several small
 // ecosystem-specific MCP config files exist alongside the shared `skills/`.
+//
+// The same holds for the SessionStart hook: one script,
+// hooks/session-start.mjs, and one small hook config per dialect under
+// hooks/ (see the hook builders below for why none of them is named
+// hooks/hooks.json).
 import { readdir, readFile, writeFile, mkdir } from "node:fs/promises";
 import { createHash } from "node:crypto";
 
@@ -87,6 +92,7 @@ export function buildPluginJson(skills, version) {
     license: "MIT",
     keywords: skills.map((s) => s.name),
     mcpServers: "./.mcp.json",
+    hooks: CLAUDE_HOOKS_PATH,
   };
 }
 
@@ -131,6 +137,7 @@ export function buildCursorPluginJson(skills, version) {
     license: "MIT",
     keywords: skills.map((s) => s.name),
     mcpServers: buildMcpJson().mcpServers,
+    hooks: CURSOR_HOOKS_PATH,
   };
 }
 
@@ -183,6 +190,7 @@ export function buildCodexPluginJson(skills, version) {
     keywords: skills.map((s) => s.name),
     skills: "./skills/",
     mcpServers: "./.codex-plugin/mcp-servers.json",
+    hooks: CODEX_HOOKS_PATH,
   };
 }
 
@@ -258,6 +266,85 @@ export function buildAgentPluginsMcpJson() {
   };
 }
 
+// SessionStart hook wiring. One zero-dependency script runs on every host;
+// only the config dialect differs. Every host gets its own file, named
+// explicitly from its plugin manifest, and no file is named
+// hooks/hooks.json. That path is a default several hosts discover on their
+// own: Claude Code merges it with the manifest's `hooks` paths
+// (code.claude.com/docs/en/plugins-reference), and Gemini CLI loads it from
+// the extension root (geminicli.com/docs/extensions/reference). Gemini CLI
+// installs this same repo root for its MCP server but gets no hook, and a
+// Claude Code file there would run on Gemini CLI with the wrong root
+// placeholder and a timeout read as milliseconds. An explicit `hooks` path
+// also stops Codex and Cursor from falling back to that default.
+//
+// Claude Code expands `${CLAUDE_PLUGIN_ROOT}` (code.claude.com/docs/en/hooks).
+// Codex exports the plugin root as the PLUGIN_ROOT environment variable
+// (learn.chatgpt.com/docs/hooks). Cursor expands `${CURSOR_PLUGIN_ROOT}` in
+// `command` (cursor.com/docs/reference/plugins) and uses the camelCase
+// `sessionStart` event (cursor.com/docs/reference/hooks). All three read
+// `timeout` in seconds. Grok Build, Gemini CLI, Google Antigravity and the
+// agent-plugins.org manifest get no hook wiring; Antigravity's plugin hooks
+// have no session-start event (antigravity.google/docs/hooks).
+export const HOOK_SCRIPT = "hooks/session-start.mjs";
+export const CLAUDE_HOOKS_PATH = "./hooks/claude-hooks.json";
+export const CODEX_HOOKS_PATH = "./hooks/codex-hooks.json";
+export const CURSOR_HOOKS_PATH = "./hooks/cursor-hooks.json";
+const HOOK_TIMEOUT_SECONDS = 10;
+
+export function buildClaudeHooksJson() {
+  return {
+    description: "SignatureAPI readiness check at session start.",
+    hooks: {
+      SessionStart: [
+        {
+          matcher: "startup",
+          hooks: [
+            {
+              type: "command",
+              command: `node "\${CLAUDE_PLUGIN_ROOT}/${HOOK_SCRIPT}" --host claude`,
+              timeout: HOOK_TIMEOUT_SECONDS,
+            },
+          ],
+        },
+      ],
+    },
+  };
+}
+
+export function buildCodexHooksJson() {
+  return {
+    hooks: {
+      SessionStart: [
+        {
+          matcher: "startup",
+          hooks: [
+            {
+              type: "command",
+              command: `node "$PLUGIN_ROOT/${HOOK_SCRIPT}" --host codex`,
+              timeout: HOOK_TIMEOUT_SECONDS,
+            },
+          ],
+        },
+      ],
+    },
+  };
+}
+
+export function buildCursorHooksJson() {
+  return {
+    version: 1,
+    hooks: {
+      sessionStart: [
+        {
+          command: `node "\${CURSOR_PLUGIN_ROOT}/${HOOK_SCRIPT}" --host cursor`,
+          timeout: HOOK_TIMEOUT_SECONDS,
+        },
+      ],
+    },
+  };
+}
+
 function sha256Hex(bytes) {
   return createHash("sha256").update(bytes).digest("hex");
 }
@@ -302,6 +389,9 @@ export async function generate() {
     "gemini-extension.json": json(buildGeminiExtensionJson(version)),
     "plugin.json": json(buildAgentPluginsPluginJson(skills, version)),
     "mcp.json": json(buildAgentPluginsMcpJson()),
+    [CLAUDE_HOOKS_PATH.slice(2)]: json(buildClaudeHooksJson()),
+    [CODEX_HOOKS_PATH.slice(2)]: json(buildCodexHooksJson()),
+    [CURSOR_HOOKS_PATH.slice(2)]: json(buildCursorHooksJson()),
   };
 }
 
