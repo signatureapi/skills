@@ -57,6 +57,40 @@ to remove a plugin-owned server. If you want the skills without the MCP server, 
 Working directly in this repo also picks up the MCP server via the checked-in root `.mcp.json` —
 the same file the Claude Code and Grok Build plugins install elsewhere.
 
+## Session-start check
+
+The plugin runs a short check when a new session starts. It stays silent unless the project uses
+SignatureAPI. A project uses SignatureAPI when one of these holds:
+
+- A `.env*` file in the project root names a `SIGNATUREAPI_` variable.
+- `package.json` lists a dependency with `signatureapi` in its name.
+- `docs/signatureapi-integration.md` exists.
+- The session has `SIGNATUREAPI_KEY` or `SIGNATUREAPI_API_KEY` set.
+
+For such a project, it checks these things:
+
+- `SIGNATUREAPI_KEY` is set in the session or in a `.env*` file, and holds a test key.
+- No live key (`key_live_`) sits in an env file that Git tracks or that is a template, such as
+  `.env.example`.
+- `SIGNATUREAPI_WEBHOOK_SECRET` is set wherever `SIGNATUREAPI_WEBHOOK_ID` is.
+- The `signatureapi` CLI runs, when it is on `PATH`. When it is not, the fixes use
+  `npx --yes signatureapi`.
+
+It adds a few lines of fixes to the agent's context only when something needs fixing. It reports
+variable and file names only, never a value. It makes no network request and sends nothing
+anywhere. It reads only the project root, runs for about two seconds at most, and never blocks
+the session.
+
+| Host | Support | Turn it off |
+|---|---|---|
+| Claude Code | Runs on new sessions | Disable the plugin in `/plugin`, or set `"disableAllHooks": true` in settings |
+| Codex | Runs after you trust it in `/hooks` | Leave it untrusted in `/hooks`, or set `hooks = false` under `[features]` in `config.toml` |
+| Cursor | Runs on new sessions; Cursor may not add the text to the agent's context | Disable or uninstall the plugin |
+| Gemini CLI, Google Antigravity, Grok Build and agent-plugins.org clients | Not wired; these get the skills and the MCP server only | Nothing to turn off |
+
+Claude Code, Codex and Cursor each read their own file under `hooks/`. All of them run
+`hooks/session-start.mjs`.
+
 ## Skills
 
 - **[signatureapi-architecture](skills/signatureapi-architecture)** — decide how your app should
@@ -113,9 +147,10 @@ After changing a skill's `SKILL.md` frontmatter (name, description) or the
 package version, run `npm run manifests` and commit every regenerated manifest in the same
 change — `npm test` fails otherwise. That's every per-ecosystem plugin/marketplace manifest
 (`.claude-plugin/`, `.cursor-plugin/`, `.codex-plugin/`, `.agents/plugins/`, `.grok-plugin/`,
-`gemini-extension.json`, root `plugin.json`/`mcp.json`), the root `.mcp.json`, and
-`agent-skills.json` — all derived from `skills/*/SKILL.md` frontmatter and the `MCP_URL`
-constant in `generate-manifests.mjs`, never hand-edited. The
+`gemini-extension.json`, root `plugin.json`/`mcp.json`), the hook files under `hooks/`
+(`claude-hooks.json`, `codex-hooks.json`, `cursor-hooks.json`), the root `.mcp.json`, and
+`agent-skills.json` — all derived from `skills/*/SKILL.md` frontmatter and the constants
+in `generate-manifests.mjs`, never hand-edited. The
 `agent-skills.json` payload is also served from elsewhere (the
 `https://signatureapi.com/.well-known/agent-skills` discovery endpoint), so
 that redeploy has to happen together with the commit, not sometime after

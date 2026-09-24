@@ -14,5 +14,6 @@
     "signatureapi-integrate"
   ],
   "skills": "./skills/",
-  "mcpServers": "./.codex-plugin/mcp-servers.json"
+  "mcpServers": "./.codex-plugin/mcp-servers.json",
+  "hooks": "./hooks/codex-hooks.json"
 }
