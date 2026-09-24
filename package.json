@@ -1,6 +1,6 @@
 {
   "name": "@signatureapi/skills",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": false,
   "description": "Agent Skills for SignatureAPI",
   "license": "MIT",

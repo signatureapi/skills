@@ -42,7 +42,8 @@ action. The signer is usually outside the app.
    `recipient_key`. `metadata` carries the app's own record id; it comes
    back on every event as `envelope_metadata`.
 3. Persist the returned envelope `id` on the domain row.
-4. Handle `envelope.completed` on the app's existing inbound-HTTP path. Then
+4. Handle `deliverable.generated` on the app's existing inbound-HTTP path;
+   `envelope.completed` can arrive before the signed file is ready. Then
    call `GET /envelopes/{envelopeId}/deliverables` and
    `GET /deliverables/{deliverableId}` to fetch the signed PDF and audit log.
    Store them where the app keeps documents.
@@ -79,8 +80,8 @@ action. The signer is usually outside the app.
   effects (queue, job, domain event). See
   `../../signatureapi-integrate/references/brownfield-placement.md`.
 - **Fetching the deliverable on `recipient.completed`.** The deliverable is
-  generated after the envelope completes. Handle `envelope.completed` (or
-  `deliverable.generated`) and then fetch. Treat a `pending` or `processing`
+  generated after the envelope completes. Handle `deliverable.generated`
+  and then fetch. Treat a `pending` or `processing`
   deliverable `status` as "not yet", not "missing".
 
 ## Shape 2 — embedded signing step

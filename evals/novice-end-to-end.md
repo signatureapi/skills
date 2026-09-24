@@ -51,9 +51,13 @@ email log)
   recipient, place, ceremony, deliverable, an authentication type, a route).
 - The approval request reads out the plain lines of the design, not the
   technical ones.
-- The user is asked to put a test key from the dashboard's API keys page
-  into the project's env file, named by file and variable. In both variants
-  the key never appears in the transcript.
+- The test key reaches the project's env file without the chat: the agent
+  runs `npx --yes signatureapi init` and relays its verification URL and
+  code, or, without a shell, asks the user to copy the key from the
+  dashboard's API keys page into a named file and variable. In both
+  variants the key never appears in the transcript.
+- With a shell, local webhooks use `signatureapi listen`, and the signing
+  secret is written by the CLI, not pasted by the user.
 - Application code is written: a call that creates the signing when Start
   engagement runs, a webhook handler on the app's existing inbound-HTTP
   path, and persistence of the signing's id on the engagement.
