@@ -37,8 +37,9 @@ use MCP first (`https://mcp.signatureapi.com/mcp`): `whoami`, `get_envelope`
 (takes `envelope_id`, not `id`), `list_envelopes`, `list_events`,
 `list_webhooks`, `list_webhook_attempts`, `get_deliverables`, `list_emails`,
 `get_email`, `search_documentation`. Reads by id work on test and live
-envelopes alike. Listings follow the session's mode, which `whoami`
-reports. Fall back to REST when a tool is missing. When you have to fall
+envelopes alike. Listings take a per-call `mode` and default to test;
+`whoami.modes.live` indicates access, not a session mode. Call `whoami`
+only for an account question or a needed live-access check. Fall back to REST when a tool is missing. When you have to fall
 back, report the gap at https://github.com/signatureapi/skills/issues/new.
 
 Identifiers named below (paths, event types, status codes) are illustrations.
@@ -82,7 +83,8 @@ test envelope never notifies a live endpoint.
 
 ### Recipient never got the email
 In **test mode no email is ever sent**. That is by design. Read what would
-have been sent with `list_emails`, then `get_email`. In live mode, look for
+have been sent with `list_emails`, then `get_email`. Only test signing-request emails expose rendered content and ceremony
+links. Authentication-code subjects and content are withheld. In live mode, look for
 `recipient.soft_bounced` / `recipient.hard_bounced` events.
 
 ### Ceremony link does not work

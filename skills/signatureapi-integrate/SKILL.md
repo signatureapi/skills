@@ -41,7 +41,7 @@ first to inspect and exercise the API as you build and verify. Use a tool
 before hand-writing a request. Its tools, by job:
 
 - Session: `whoami`.
-- Documents: `mint_upload_url` or `upload_file` (one per host),
+- Documents: `mint_upload_url` or `upload_file` (depending on host capabilities),
   `inspect_upload`.
 - Envelopes: `create_envelope`, `get_envelope`, `list_envelopes`,
   `cancel_envelope`, `delete_envelope`.
@@ -49,7 +49,7 @@ before hand-writing a request. Its tools, by job:
 - Watching: `list_events` (with `wait_seconds`), `get_deliverables`,
   `list_emails`, `get_email`.
 - Webhooks: `list_webhooks`, `create_webhook`, `update_webhook`,
-  `test_webhook`, `list_webhook_attempts`, `delete_webhook`.
+  `list_webhook_attempts`, `delete_webhook`.
 - Docs: `search_documentation` (a `page` argument returns one docs page in
   full).
 
@@ -65,18 +65,25 @@ point the user at https://github.com/signatureapi/skills/issues/new. Test
 email inspection is an MCP or dashboard capability, not an established
 public REST fallback.
 
-**MCP mode is per session, not per call.** Call `whoami` first. The session
-acts in live mode when `modes.live` is true and the account is active.
-Otherwise it acts in test mode. Envelope creation and every listing follow
-the session mode. Reads by id (`get_envelope`, `list_events` with an
-`envelope_id`, `get_deliverables`) work on either mode. Webhook tools take a
-`mode` argument. **Never call `create_envelope` until `whoami` has shown
-the session is in test mode.** A live envelope emails a real person and is
-binding. When `whoami` is not listed, or shows a live session, create test
-envelopes with the scripts instead: they run with your `key_test_` key and
-cannot reach live mode. Then read the test envelope by id through MCP. If
-a `create_envelope` response ever shows `mode: live`, cancel it at once and
-tell the user what was sent.
+**MCP mode is per call.** Pass `mode: "test"` explicitly when creating test
+envelopes and listing test records. `whoami.modes.live` is permission to
+use live mode, not the current mode. A live-capable account can still
+create test envelopes through MCP; no REST fallback is needed for that.
+Reads by id follow the resource's mode. Never use `mode: "live"` without
+the user's explicit intent. Check the mode returned by creation; if an
+unintended live envelope is created, stop and tell the user before taking
+further action.
+
+Call `whoami` only when the user asks which account is connected or a
+requested live action requires checking access. The OpenAI endpoint returns
+account name and available modes, without user identifiers or key status.
+
+Do not collect government IDs, health information, payment-card data,
+biometric verification, passwords, or authentication codes through the
+plugin. This applies to documents, metadata, template values and free text.
+Use synthetic test data. Custom authentication evidence stays in the user's
+application; plugin inputs accept only non-secret audit references and
+timestamps. Never ask the user to paste credentials into chat.
 
 ## Know your host
 
@@ -85,7 +92,9 @@ a shell. Check what you actually have, and adapt:
 
 - **A tool that takes an attached file** (`upload_file`) → use it for
   documents. **A tool that returns an upload URL** (`mint_upload_url`) →
-  send the bytes to that URL yourself. Exactly one of the two is listed.
+  send the bytes to that URL yourself. When both exist, use `mint_upload_url`
+  for local files with a shell and `upload_file` only for host-provided file
+  references; never invent a file reference.
 - **A writable project filesystem** → the user puts the test key in the
   project's gitignored env file, as Setup describes, and the scripts read
   it from there. **No filesystem** → do not ask for the key and do not
@@ -130,8 +139,8 @@ returns a credential: a tool result lands in the transcript, and the model,
 not a person, decides to read it. The user fetches secrets from the
 dashboard.
 
-1. Call `whoami`. Note the account, and whether a test key already exists
-   (`test_api_key.exists`).
+1. For MCP-only work, OAuth already authenticates calls; no API key is needed.
+   For application code or bundled REST scripts, use the private setup below.
 2. Ask the user to create or copy a test key (`key_test_…`) on the
    dashboard's API keys page, `https://dashboard.signatureapi.com/settings/api-keys`,
    and to put it in the project's gitignored env file as `SIGNATUREAPI_KEY`.
@@ -227,14 +236,15 @@ the deliverable: the same flow written into the application.
    unless its anti-phishing content capability is enabled. If the product
    needs that content, record account enablement as a prerequisite instead
    of silently removing it. Then create the envelope: re-run without
-   `--dry-run`. In a test-mode MCP session, `create_envelope` works too.
+   `--dry-run`. With MCP, pass `mode: "test"` to `create_envelope`.
 3. **Handle events.** Register a test-mode webhook endpoint with
    `create_webhook`. Its signing secret is not returned. The tool names the
    dashboard page that shows it (`signing_secret_dashboard_url`). Ask the
    user to copy it into the project's env file as
    `SIGNATUREAPI_WEBHOOK_SECRET`, the same way as the API key. Run `node scripts/webhook-receiver.mjs` for a local receiver to point it
-   at. Send a sample delivery with `test_webhook`, then confirm a 2xx with
-   `list_webhook_attempts`. Handle at least `envelope.completed`. The full
+   at. Create a synthetic test envelope to generate real test events, then
+   check delivery status with `list_webhook_attempts`. There is no MCP
+   sample-delivery tool. Handle at least `envelope.completed`. The full
    event list, the handler shape and the local-dev alternative are in
    `references/webhooks.md`.
 4. **Write it into the application.** Use the codebase's own HTTP client and
