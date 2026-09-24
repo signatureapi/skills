@@ -167,7 +167,12 @@ Steps 1–3 prove the flow against the test API. Step 4 is the deliverable.
    link. Read `references/ceremonies.md` when the flow delivers links
    itself, embeds signing or has several recipients. Keep test titles and
    messages plain: an account may reject URL-, phone- or date-like text
-   there. Re-run without `--dry-run` to create it.
+   there. If the design sets `branding.logo`, use the `url` of a permanent
+   PNG upload in the same account; the API rejects any other URL,
+   including a temporary upload. Upload the PNG with `POST /uploads`, then
+   call `POST /uploads/{uploadId}/store` with a unique `key`. Or ask the
+   user to upload it in the Dashboard Library and give you its URL.
+   Re-run without `--dry-run` to create it.
 3. **Handle events.** Handle `envelope.completed` for status and
    `deliverable.generated` to fetch the signed file.
    **With a shell**, start the app's handler, then in a background shell:
