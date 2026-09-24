@@ -226,7 +226,13 @@ the deliverable: the same flow written into the application.
    URL-like, phone-like, or numeric date content in `title` and `message`
    unless its anti-phishing content capability is enabled. If the product
    needs that content, record account enablement as a prerequisite instead
-   of silently removing it. Then create the envelope: re-run without
+   of silently removing it. If the design sets `branding.logo`, use the
+   `url` of a permanent PNG upload in the same account. Never pass the
+   customer's website, CDN or storage URL for the logo; the API rejects
+   it. Upload the PNG with `POST /uploads`. Then call
+   `POST /uploads/{uploadId}/store` with a unique `key` to make it
+   permanent. A temporary upload is rejected too. Or ask the user to
+   upload the logo in the Dashboard Library and give you its URL. Then create the envelope: re-run without
    `--dry-run`. In a test-mode MCP session, `create_envelope` works too.
 3. **Handle events.** Register a test-mode webhook endpoint with
    `create_webhook`. Its signing secret is not returned. The tool names the

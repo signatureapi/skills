@@ -73,6 +73,8 @@ receives email, or what the user would call done.
 - Which languages the ceremony and emails need (`language`).
 - Logo, accent color and email footer (`branding`), and whether tenants get
   their own.
+- Where each logo comes from. `branding.logo` takes only the `url` of a
+  permanent PNG upload in the same account, never an external image URL.
 
 ## Non-goals and scope
 
