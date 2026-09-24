@@ -141,13 +141,7 @@ ceremony directly:
 node scripts/complete-ceremony.mjs --envelope <envelope id>
 ```
 
-No flag gates this command. An agent runs non-interactively. Any check a flag
-could enforce is one the agent could satisfy on its own by passing it. No
-in-band mechanism can obtain real human consent from a non-interactive
-session. A flag shaped like a consent gate would only suggest that something
-is enforced when nothing is. What makes this branch safe is structural, not
-a flag: the script cannot run against a live key at all, because
-`requireTestKey` has no bypass path.
+The script refuses a live key. There is no flag to change that.
 
 The script resolves the ceremony URL itself. It fetches the envelope with
 your `SIGNATUREAPI_KEY`. That fetch is the actual test-mode gate: a test key

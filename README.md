@@ -57,6 +57,20 @@ to remove a plugin-owned server. If you want the skills without the MCP server, 
 Working directly in this repo also picks up the MCP server via the checked-in root `.mcp.json` —
 the same file the Claude Code and Grok Build plugins install elsewhere.
 
+## Update
+
+New skill content reaches existing installs through each client's update command. Only Codex
+(on startup) and Cursor (when an admin enables Auto Refresh) update on their own.
+
+| Ecosystem | Update |
+|---|---|
+| Claude Code | `/plugin marketplace update signatureapi`, then `/plugin update signatureapi@signatureapi`, then `/reload-plugins` |
+| Codex | Automatic on startup, or `codex plugin marketplace upgrade signatureapi` |
+| Cursor | **Dashboard → Plugins → Refresh** on the marketplace, or enable Auto Refresh |
+| Grok Build | `grok plugin marketplace update`, then `grok plugin update` |
+| Gemini CLI | `gemini extensions update signatureapi`, then restart Gemini CLI |
+| `npx skills` | `npx skills update` |
+
 ## Session-start check
 
 The plugin runs a short check when a new session starts. It stays silent unless the project uses
@@ -113,14 +127,19 @@ event types and limits are read from the published OpenAPI spec on demand, and a
 this repo whenever an identifier a skill mentions stops existing in that spec.
 The integrate and diagnose skills also carry a handful of scripts for the parts an agent shouldn't improvise:
 querying the OpenAPI spec instead of reading a 108 KB docs page, minting a test document and
-creating a test envelope, watching for events or receiving webhooks locally, walking a real
-browser through a ceremony, and pulling a verdict for a stuck envelope.
+creating a test envelope, watching for events, walking a real browser through a ceremony, and
+pulling a verdict for a stuck envelope. Credentials and local webhooks go through the
+SignatureAPI CLI (`npx signatureapi init`, `listen`).
 
 ## Requirements
 
 - A SignatureAPI key in the `SIGNATUREAPI_KEY` environment variable. Read from the environment
   only — never pass it as a command-line argument, since argv is exposed in shell history and
   process listings on any shared or logged system.
+  `npx signatureapi init` writes your test key to the project's env file after you sign in in
+  the browser, without printing it. Or copy it from the dashboard's API keys page.
+- For local webhooks, `npx signatureapi listen --forward-to <local url>` registers a test-mode
+  endpoint, tunnels it to your handler, and writes its signing secret to the env file.
 - Node.js 22 or later.
 
 ## Safety
@@ -142,6 +161,15 @@ browser through a ceremony, and pulling a verdict for a stuck envelope.
 ## Contributing
 
 Issues and pull requests are welcome: https://github.com/signatureapi/skills
+
+To release, bump `version` in `package.json` and run `npm run manifests`, so every manifest
+carries the new version. Claude Code keeps existing installs on the cached version until that
+number changes. Do not publish GitHub Releases: once one exists, Gemini CLI installs follow
+release tags instead of the default branch.
+
+When a rewrite makes `test/spec-drift.test.mjs` report an unused allowlist entry, check whether the
+rewrite dropped that content before deleting the entry. Compare the backticked identifiers of the old
+and new skill (and its references); restore anything lost unintentionally.
 
 After changing a skill's `SKILL.md` frontmatter (name, description) or the
 package version, run `npm run manifests` and commit every regenerated manifest in the same

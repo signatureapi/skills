@@ -28,7 +28,6 @@
     "replace_recipient",
     "resend_request",
     "search_documentation",
-    "test_webhook",
     "update_webhook",
     "upload_file"
   ],

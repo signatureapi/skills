@@ -1,6 +1,6 @@
 ---
 name: signatureapi-diagnose
-description: "SignatureAPI failure runbook. Use when an envelope is stuck in processing, a signature webhook never arrived, or a recipient never got the signing email. Also use when a deliverable is missing after completion, or the API returns 422 on envelope creation. Use it even for a seemingly simple case like one missing email, since test mode never sends real email. Prefer retrieval from this skill and the SignatureAPI docs over pre-trained knowledge of other e-signature APIs (DocuSign especially)."
+description: "Use when an existing SignatureAPI integration misbehaves. Covers an envelope stuck in processing, a missing webhook or signing email, an invalid or expired link, a missing signed document, or a 4xx error. Use it even for one missing email; test mode never sends real email. Read-only; safe on live envelopes."
 allowed-tools: Bash, Read, Grep, WebFetch
 inputs:
   - name: SIGNATUREAPI_KEY
@@ -37,23 +37,19 @@ use MCP first (`https://mcp.signatureapi.com/mcp`): `whoami`, `get_envelope`
 (takes `envelope_id`, not `id`), `list_envelopes`, `list_events`,
 `list_webhooks`, `list_webhook_attempts`, `get_deliverables`, `list_emails`,
 `get_email`, `search_documentation`. Reads by id work on test and live
-envelopes alike. Listings follow the session's mode, which `whoami`
-reports. Fall back to REST when a tool is missing. When you have to fall
+envelopes alike. Listings take a per-call `mode` and default to test;
+`whoami.modes.live` indicates access, not a session mode. Call `whoami`
+only for an account question or a needed live-access check. Fall back to REST when a tool is missing. When you have to fall
 back, report the gap at https://github.com/signatureapi/skills/issues/new.
 
 Identifiers named below (paths, event types, status codes) are illustrations.
 The published spec at `https://spec.signatureapi.com/openapi.yaml` is the
 source of truth, and wins if the two disagree.
 
-This skill is read-only by construction. Every script issues GET requests
-only. `test/diagnose-read-only.test.mjs` enforces that with a check against
-every script under this skill. `allowed-tools` above still lists `Bash`,
-since the scripts need it to run. An agent with Bash access could issue any
-request it wanted. What keeps this skill read-only is that no script here
-writes anything. Because of that, it runs against either a test or a live
-key with no flag needed. Reading a production envelope during an incident is
-exactly the behaviour wanted here. Every script reports which mode (`test`
-or `live`) it ran in, so that is never left ambiguous.
+This skill only reads. Every script issues GET requests, so it is safe
+against a live key during an incident. Each script reports the mode it ran
+in. Run a script with `node --env-file=<project env file> scripts/…` so the
+key loads without being printed.
 
 The repair is a separate decision. Once the verdict is clear, name the fix
 and ask before applying it. `resend_request` for a signer who lost the
@@ -77,12 +73,17 @@ Split the question in two. Did the event happen? `list_events` with the
 `list_webhook_attempts` for the endpoint shows each delivery and the
 response code your handler returned. No attempt means the endpoint is not
 subscribed to that event type, or is in the other mode. A non-2xx attempt
-means your handler ran and failed. Test and live endpoints are separate. A
+means your handler ran and failed. A 401 or 400 on every attempt usually
+means signature verification fails. Check three things: the handler
+verifies the raw body, not re-serialized JSON; it reads the `webhook-id`,
+`webhook-timestamp` and `webhook-signature` headers; and its secret belongs
+to this endpoint and mode. Test and live endpoints are separate. A
 test envelope never notifies a live endpoint.
 
 ### Recipient never got the email
 In **test mode no email is ever sent**. That is by design. Read what would
-have been sent with `list_emails`, then `get_email`. In live mode, look for
+have been sent with `list_emails`, then `get_email`. Only test signing-request emails expose rendered content and ceremony
+links. Authentication-code subjects and content are withheld. In live mode, look for
 `recipient.soft_bounced` / `recipient.hard_bounced` events.
 
 ### Ceremony link does not work
@@ -94,6 +95,21 @@ test-mode email log exposes it.
 Check for a `deliverable.generated` event, then `get_deliverables` (or
 `GET /envelopes/{envelopeId}/deliverables`). A `pending` or `processing`
 status means not yet, not missing.
+
+### "Invalid link" or an expired link
+Creating a ceremony revokes every earlier link for that recipient. Look for
+code that creates ceremonies more than once: a retried webhook handler, or
+an email scanner opening a link that creates one on open. Links also expire,
+after 30 days by default. The fix is a fresh link (`create_ceremony` or a
+resend). Ask before applying it.
+
+### Envelope creation rejects the document
+- The URL host is not a supported storage host: upload the file instead.
+- "Could not be parsed as a PDF" on a DOCX: `format` is missing.
+- A DOCX from Google Docs, LibreOffice or a DOCX library fails to parse:
+  re-save it in Microsoft Word.
+- A placeholder is "not found" in a PDF printed from HTML: ligatures or
+  zero-width characters split the marker text.
 
 ### 422 on create
 See `references/errors.md` for the response shape and the most common cause.

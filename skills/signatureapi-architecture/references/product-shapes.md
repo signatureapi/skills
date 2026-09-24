@@ -42,7 +42,8 @@ action. The signer is usually outside the app.
    `recipient_key`. `metadata` carries the app's own record id; it comes
    back on every event as `envelope_metadata`.
 3. Persist the returned envelope `id` on the domain row.
-4. Handle `envelope.completed` on the app's existing inbound-HTTP path. Then
+4. Handle `deliverable.generated` on the app's existing inbound-HTTP path;
+   `envelope.completed` can arrive before the signed file is ready. Then
    call `GET /envelopes/{envelopeId}/deliverables` and
    `GET /deliverables/{deliverableId}` to fetch the signed PDF and audit log.
    Store them where the app keeps documents.
@@ -79,8 +80,8 @@ action. The signer is usually outside the app.
   effects (queue, job, domain event). See
   `../../signatureapi-integrate/references/brownfield-placement.md`.
 - **Fetching the deliverable on `recipient.completed`.** The deliverable is
-  generated after the envelope completes. Handle `envelope.completed` (or
-  `deliverable.generated`) and then fetch. Treat a `pending` or `processing`
+  generated after the envelope completes. Handle `deliverable.generated`
+  and then fetch. Treat a `pending` or `processing`
   deliverable `status` as "not yet", not "missing".
 
 ## Shape 2 — embedded signing step
@@ -193,8 +194,9 @@ means. It has the most code outside SignatureAPI.
   `../../signatureapi-integrate/scripts/watch-events.mjs`) for the
   per-recipient events the UI depends on. `replace_recipient` and
   `resend_request` to exercise the repair paths.
-- `list_webhooks`, `create_webhook`, `test_webhook` and
-  `list_webhook_attempts` for the endpoint the platform registers.
+- `list_webhooks`, `create_webhook` and `list_webhook_attempts` for the
+  endpoint the platform registers. Generate events with a synthetic test
+  envelope; no MCP sample-delivery tool exists.
   `update_webhook` to point it elsewhere without recreating it.
 
 **Decisions the design document must settle:** every decision in the matrix.
