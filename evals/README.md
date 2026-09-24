@@ -43,6 +43,8 @@ design gate in `signatureapi-integrate`.
 | `quick-path.md` | Honors a request for one recommended design |
 | `design-gate.md` | "Build me a DocuSign" produces a design conversation, not code |
 | `novice-end-to-end.md` | A user who knows no SignatureAPI term reaches a working test integration |
+| `activation.md` | Each skill loads on its own prompts and stays out of near misses |
+| `support-gotchas.md` | The integration mistakes customers made most often |
 
 ## Other hosts
 

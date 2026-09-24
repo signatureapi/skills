@@ -81,8 +81,9 @@ Ask when the app has a frontend; it changes what the signer sees.
 
 ## When everyone has signed, what should happen?
 
-- "Store the signed document with the record" → handle `envelope.completed`,
-  fetch the deliverables, store the file, mark the domain row.
+- "Store the signed document with the record" → handle
+  `deliverable.generated`, fetch the deliverables, store the file, mark the
+  domain row.
 - "Email every signer their copy" (or not) → `delivery_type: email` or
   `none` per recipient.
 - "Include the signing history pages" (or a clean copy) → `standard` or

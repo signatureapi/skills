@@ -59,6 +59,20 @@ place. Fixed positions do not disable or replace other placeholders already
 embedded in the document. Generate the envelope, then open a test render and
 confirm placement.
 
+## Placeholder rules
+
+- Any `[[...]]` text in a document is read as a placeholder. Every one
+  needs a matching place, or creation fails with a 422. Remove stray
+  bracket text from the file.
+- A key appears once per document. It may repeat across documents in the
+  same envelope.
+- `{{ }}` is template data, never a place. `{{signature}}` in a DOCX is
+  read as a missing data value.
+- The marker text stays in the document under the place. Colour it white
+  in the source file so it does not show.
+- PDFs printed from HTML can hide a marker from the text search. See
+  `documents.md`.
+
 ## Read the document before placing anything
 
 Call `inspect_upload` (MCP) with the upload id from `mint_upload_url` or

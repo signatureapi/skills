@@ -14,7 +14,9 @@ Error responses use RFC 7807 problem details:
 ## Status codes
 
 **401** — the API key was rejected. Confirm `SIGNATUREAPI_KEY` is set and
-current.
+current, and starts with a lowercase `key_`; pasted keys often gain a
+capital letter. A `live-mode-disabled` type means the key is live but live
+mode is not active on the account; it needs a subscription.
 
 **403** — the key is valid but not permitted for this action.
 
@@ -26,8 +28,15 @@ not exist.
 **409** — the envelope is already in a final state (for example, cancelling
 a completed envelope). Check `status` on the envelope first.
 
-**422** — validation failure. `detail` names the offending field. The most
-common cause is a place's `recipient_key` matching no recipient `key`.
+**422** — validation failure. `detail` names the offending field. Common
+causes:
+
+- A place's `recipient_key` matches no recipient `key`.
+- Field names in camelCase or PascalCase. Every field is snake_case; set
+  the app's JSON serializer to match.
+- `[[...]]` text in the document with no matching place, or a key used
+  twice in one document.
+- A `blocked-email` type: the address hard-bounced before. Correct it.
 
 **429** — rate limited. Back off and retry with increasing delay.
 
