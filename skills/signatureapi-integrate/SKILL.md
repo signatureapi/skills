@@ -30,10 +30,12 @@ SDK. The app never depends on MCP, the CLI or this skill's scripts.
 mode only. Test keys start with `key_test_`.
 
 - **MCP** (`https://mcp.signatureapi.com/mcp`) inspects and exercises the
-  API. Call `whoami` first. Tools that create or list take a `mode` that
-  defaults to `test`; never pass `live`. If a create response ever shows
-  `live`, cancel that envelope at once and tell the user. Its tools, by
-  job:
+  API. MCP mode is per call: pass `mode: "test"` explicitly when creating
+  and listing. `whoami.modes.live` is permission to use live mode, not the
+  current mode. Reads by id follow the resource's mode. Never pass `live`
+  without the user's explicit intent. Check the mode a create returns; if an
+  unintended live envelope was created, stop and tell the user. Its tools,
+  by job:
   - Documents: `upload_file` or `mint_upload_url`, `inspect_upload`.
   - Envelopes: `create_envelope`, `get_envelope` (takes `envelope_id`),
     `list_envelopes`, `cancel_envelope`, `delete_envelope` (final status
@@ -41,9 +43,12 @@ mode only. Test keys start with `key_test_`.
   - Recipients: `resend_request`, `replace_recipient`, `create_ceremony`.
   - Watching: `list_events`, `get_deliverables`, `list_emails`,
     `get_email`.
+  - Session: `whoami`. Call it only when the user asks which account is
+    connected or a requested live action needs an access check.
   - Webhooks: `list_webhooks`, `create_webhook`, `update_webhook`,
-    `test_webhook`, `list_webhook_attempts`, `delete_webhook`.
-  - Docs: `search_documentation`.
+    `list_webhook_attempts`, `delete_webhook`.
+  - Docs: `search_documentation` (a `page` argument returns one docs page
+    in full).
 - **The CLI** (`npx --yes signatureapi <command>`) handles secrets and
   local ports when you have a shell. `init` writes the test key to the
   env file. `listen` tunnels test webhooks to a local handler and writes
@@ -59,12 +64,22 @@ A missing MCP tool does not prove a REST operation exists. Confirm it with
 fails, stop and report the gap at
 https://github.com/signatureapi/skills/issues/new.
 
+Do not collect government IDs, health information, payment-card data,
+biometric verification, passwords, or authentication codes through the
+plugin. This applies to documents, metadata, template values and free text.
+Use synthetic test data. Custom authentication evidence stays in the user's
+application; plugin inputs accept only non-secret audit references and
+timestamps. Never ask the user to paste credentials into chat.
+
 ## Know your host
 
 - **A shell:** use the CLI and the scripts. **No shell:** use MCP for every
   step, and the dashboard for credentials.
-- **Upload tool:** your client lists either `upload_file` (takes the file)
-  or `mint_upload_url` (returns a URL to send the bytes to).
+- **Upload tool:** your client lists `upload_file` (takes a host-provided
+  file reference), `mint_upload_url` (returns a URL to send the bytes to),
+  or both. With both, use `mint_upload_url` for local files with a shell
+  and `upload_file` only for host-provided file references. Never invent a
+  file reference.
 - **No filesystem:** do not ask for the key. MCP is already authenticated.
 - **No repository** (a chat host such as ChatGPT): design with
   `signatureapi-architecture` and prove the flow with MCP in test mode.
@@ -93,7 +108,8 @@ use `search_documentation` (MCP) or any docs page's Markdown twin at
 The key goes into the project's gitignored env file without passing through
 the chat. No MCP tool returns a credential.
 
-1. Call `whoami`. Note the account and `test_api_key.exists`.
+1. For MCP-only work, OAuth already authenticates calls; no API key is
+   needed. For application code or the bundled REST scripts, set up the key:
 2. **With a shell**, run `npx --yes signatureapi init` from the
    application directory, in a background shell. It prints a verification
    URL and a code, then waits. Give both to the user to approve. It then
@@ -172,7 +188,8 @@ Steps 1–3 prove the flow against the test API. Step 4 is the deliverable.
    including a temporary upload. Upload the PNG with `POST /uploads`, then
    call `POST /uploads/{uploadId}/store` with a unique `key`. Or ask the
    user to upload it in the Dashboard Library and give you its URL.
-   Re-run without `--dry-run` to create it.
+   Re-run without `--dry-run` to create it. With MCP, pass `mode: "test"`
+   to `create_envelope`.
 3. **Handle events.** Handle `envelope.completed` for status and
    `deliverable.generated` to fetch the signed file.
    **With a shell**, start the app's handler, then in a background shell:
@@ -184,9 +201,11 @@ Steps 1–3 prove the flow against the test API. Step 4 is the deliverable.
    `npx --yes signatureapi trigger envelope.completed` and check the
    handler's own output for a 2xx. Stop the listener when done; that
    disables the endpoint.
-   **Without a shell**, or for an endpoint already hosted, use
-   `create_webhook`, `test_webhook` and `list_webhook_attempts`. The user
-   copies the signing secret from `signing_secret_dashboard_url`.
+   **Without a shell**, or for an endpoint already hosted, register it
+   with `create_webhook`. The user copies the signing secret from
+   `signing_secret_dashboard_url`. There is no MCP sample-delivery tool:
+   create a synthetic test envelope to generate real test events, then
+   check delivery with `list_webhook_attempts`.
    `references/webhooks.md` has the verification code and the handler rules.
 4. **Write it into the application**, using the codebase's conventions.
    Put the `POST /envelopes` call where the domain action happens. Mount

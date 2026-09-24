@@ -80,9 +80,11 @@ run this in a background shell:
 `list_webhooks` first, to avoid a duplicate. Then `create_webhook` with the
 URL and event types. The signing secret is never returned; the user copies
 it from `signing_secret_dashboard_url` into the env file as
-`SIGNATUREAPI_WEBHOOK_SECRET`. `test_webhook` sends a sample.
-`list_webhook_attempts` shows each delivery and the handler's response
-code. Without MCP, use the dashboard:
+`SIGNATUREAPI_WEBHOOK_SECRET`. There is no MCP sample-delivery tool:
+create a synthetic test envelope to generate real test events.
+`list_webhook_attempts` shows each delivery, its response code and timing
+(not the response body), which is how you tell "the event fired" apart
+from "my handler never ran". Without MCP, use the dashboard:
 `https://dashboard.signatureapi.com/settings/webhooks?mode=test`.
 
 Test and live endpoints are separate. A test envelope never notifies a live

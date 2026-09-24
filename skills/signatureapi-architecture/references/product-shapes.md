@@ -194,8 +194,9 @@ means. It has the most code outside SignatureAPI.
   `../../signatureapi-integrate/scripts/watch-events.mjs`) for the
   per-recipient events the UI depends on. `replace_recipient` and
   `resend_request` to exercise the repair paths.
-- `list_webhooks`, `create_webhook`, `test_webhook` and
-  `list_webhook_attempts` for the endpoint the platform registers.
+- `list_webhooks`, `create_webhook` and `list_webhook_attempts` for the
+  endpoint the platform registers. Generate events with a synthetic test
+  envelope; no MCP sample-delivery tool exists.
   `update_webhook` to point it elsewhere without recreating it.
 
 **Decisions the design document must settle:** every decision in the matrix.
