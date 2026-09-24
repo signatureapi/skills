@@ -89,6 +89,12 @@ Test and live endpoints are separate. A test envelope never notifies a live
 endpoint. Before a handler exists, watch events instead: `list_events` with
 `wait_seconds`, or `scripts/watch-events.mjs`.
 
+Most integrations need a handler. The app needs one when it acts on an
+outcome: it marks a record signed, stores the signed file, or reacts to a
+rejection or a bounce. Watching events proves the flow while you work. It
+does not replace the handler. If the design has no handler, say so in the
+remaining work, with the reason.
+
 ## Handler shape
 
 Every delivery is signed under the Standard Webhooks spec. Verify it before
@@ -136,3 +142,11 @@ Answer 2xx quickly. Any other status counts as a failed delivery and is
 retried for up to 48 hours. Handlers must be idempotent: the same event can
 arrive more than once. Delivery order is not guaranteed. Key on the event's
 `id` to deduplicate, and re-read the envelope when the order matters.
+
+Find the app's record by the envelope id. Store the envelope `id` on the
+domain row when you create the envelope, then look up `data.envelope_id`.
+Use `envelope_metadata` only as a fallback.
+
+Take the outcome from the verified event, never from the ceremony return.
+A `redirect_url` visit only says the browser came back. Anyone can load it
+with any query string, and a signer can close the tab before it loads.
