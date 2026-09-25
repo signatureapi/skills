@@ -20,7 +20,7 @@
       "type": "skill-md",
       "description": "Use when writing or changing code that calls SignatureAPI once the signing flow is agreed. Covers creating envelopes, placing signature fields, handling SignatureAPI webhooks, embedding signing, and sending one test envelope. Use it even for a single envelope, and in hosts without a repository. Works in test mode.",
       "url": "https://raw.githubusercontent.com/signatureapi/skills/main/skills/signatureapi-integrate/SKILL.md",
-      "digest": "sha256:35bb16cdfeee960db6c6ae3fe8e3476e6094ca9488c1e91ffb8fda7b75ca9535"
+      "digest": "sha256:fd9912ace787e18b1682301e069ce455a2d25b86bb2322d687ab24843e24f472"
     }
   ]
 }
