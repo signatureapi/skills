@@ -68,7 +68,7 @@ run this in a background shell:
   `SIGNATUREAPI_WEBHOOK_SECRET` to the env file, without printing the
   secret. A rerun reuses the same endpoint and secret.
 - `--event <type>`, repeated, subscribes to a subset; the default is every
-  event. `--env-file` picks another env file. `--public-url <https url>`
+  event. `--env-path` picks another env file. `--public-url <https url>`
   replaces `--forward-to` when you run your own tunnel.
 - `npx --yes signatureapi trigger envelope.completed` sends a labeled
   example to that endpoint only. It completes no envelope.

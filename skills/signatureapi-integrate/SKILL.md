@@ -53,8 +53,8 @@ mode only. Test keys start with `key_test_`.
   local ports when you have a shell. `init` writes the test key to the
   env file. `listen` tunnels test webhooks to a local handler and writes
   their signing secret. `trigger <event type>` sends one example event.
-  `api-keys list --mode test` shows key metadata. No command prints a
-  secret. Never run a CLI command with
+  `api-keys list --mode test` shows key metadata. `whoami` names the
+  account the CLI acts for. No command prints a secret. Never run a CLI command with
   `--mode live`.
 - **The scripts** here read the contract and drive a test envelope. See
   Scripts below.
@@ -114,8 +114,11 @@ the chat. No MCP tool returns a credential.
    application directory, in a background shell. It prints a verification
    URL and a code, then waits. Give both to the user to approve. It then
    writes the test key as `SIGNATUREAPI_KEY` to `.env.local` (Next.js) or
-   `.env`. Use `--env-file` and `--var` to match the project. Without an
-   OS keychain, add `--credential-store file` to every CLI command.
+   `.env`. Use `--env-path` and `--var` to match the project. Its result
+   names the account as `account.id`. With the MCP connected, compare it
+   with `whoami`'s `account.id`. If they differ, the CLI and the MCP act
+   for different organizations: stop and ask the user which one to use,
+   then run `npx --yes signatureapi logout` and `login` to switch.
    **Without a shell**, ask the user to copy the test key from
    `https://dashboard.signatureapi.com/settings/api-keys` into the env
    file. Name the file and the variable.
