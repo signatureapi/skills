@@ -114,7 +114,7 @@ the chat. No MCP tool returns a credential.
    application directory, in a background shell. It prints a verification
    URL and a code, then waits. Give both to the user to approve. It then
    writes the test key as `SIGNATUREAPI_KEY` to `.env.local` (Next.js) or
-   `.env`. Use `--env-file` and `--var` to match the project. Without an
+   `.env`. Use `--env-path` and `--var` to match the project. Without an
    OS keychain, add `--credential-store file` to every CLI command.
    **Without a shell**, ask the user to copy the test key from
    `https://dashboard.signatureapi.com/settings/api-keys` into the env
