@@ -4,7 +4,7 @@
 the REST calls an app makes and the tools an agent proves them with. Design
 context, not production guidance on its own. Full workflow: SKILL.md.*
 
-Three shapes are the most common starting points. They are not a menu.
+Four shapes are the most common starting points. They are not a menu.
 A product often combines two, or departs from one in a way that matters.
 Name the closest shape and the departures. Each shape lists four things. What the **application** calls (REST, in its own language). What
 **you** use to prove it while you work (MCP tools and the
@@ -219,3 +219,86 @@ This shape has no defaults. In particular:
   types do not exist here. An envelope is created complete. It is immutable
   except for `label`. Drafts and templates are the platform's own data. They
   become an envelope only at send time.
+
+## Shape 4 — signing inside a native mobile app
+
+The signer is logged in to the company's own iPhone or Android app, and
+signs without leaving it. The ceremony loads in a WebView inside the app.
+The app's server talks to SignatureAPI; the app itself never does.
+
+**The application calls**
+
+1. The app's server calls `POST /envelopes` as in Shape 2, with `custom`
+   authentication for each in-app signer. Leave `redirect_url` unset;
+   embedded ceremonies ignore it. Keep every SignatureAPI call on the
+   server. An API key inside an app bundle is a leaked key.
+2. The server returns `recipients[].ceremony.url` to that signer's app
+   session only. The app appends `embedded=true&event_delivery=redirect`
+   and loads the URL as the WebView's own page. A top-level WebView needs
+   no `embeddable_in`.
+3. The app catches the ceremony's result in the WebView's navigation
+   handler. It is a navigation to `signatureapi-message://<event type>/`.
+   On iOS use `webView(_:decidePolicyFor:decisionHandler:)`; on Android
+   use `shouldOverrideUrlLoading`. Cancel the navigation, then read the
+   event type from the URL host. No request reaches the network, so
+   HTTP-layer interception never sees it.
+4. The app handles `ceremony.completed`, `ceremony.canceled`,
+   `ceremony.declined` and `ceremony.failed`. A failure carries an error
+   type in the query string. Branch on it, and treat an unknown value as a
+   generic failure.
+5. Before acting on an outcome, the server confirms it. Read the envelope
+   with `GET /envelopes/{envelopeId}`, or handle `recipient.completed`.
+   Fetch the deliverable as in Shape 1.
+6. When the signer comes back later, the app asks its server for the
+   current URL. With the `standard` `url_variant`, every read of the
+   envelope returns a fresh URL for the same ceremony. After expiry or
+   revocation, `POST /recipients/{recipientId}/ceremonies` issues a new
+   one, as in Shape 2.
+
+The alternative is a local page in the app that holds the ceremony in an
+iframe. List that page's origin in `embeddable_in`; a made-up https base
+URL works. Load the ceremony with `event_delivery=message`. The page
+accepts a message only when its origin is `https://sign.signatureapi.com`
+and its source is the iframe's window. It then forwards the message to
+native code. Prefer the top-level WebView. The rules are in the "Native
+mobile apps" section of `../../signatureapi-integrate/references/ceremonies.md`.
+Per-platform code is in the
+[iOS](https://signatureapi.com/docs/embedded/ios) and
+[Android](https://signatureapi.com/docs/embedded/android) guides.
+
+**You prove it with**
+
+- `create_envelope` with a `custom` recipient and no `embeddable_in`. Then
+  load the returned ceremony URL in the app on a simulator or emulator.
+- Branch B with `--embedded redirect`
+  (`../../signatureapi-integrate/scripts/complete-ceremony.mjs`). It checks
+  that the ceremony delivers `ceremony.completed` over the redirect
+  channel. Use `--embedded message` for the iframe alternative. See
+  `../../signatureapi-integrate/references/verification-loop.md`.
+- `list_events` (over REST:
+  `../../signatureapi-integrate/scripts/watch-events.mjs`) to see
+  `recipient.completed` and `envelope.completed`.
+- The app's own UI tests with real input: XCUITest taps or UiAutomator
+  gestures. Assert on the intercepted event. The ceremony arms completion
+  only after input a person produces. A click dispatched from JavaScript
+  does not count, and a "Confirm to continue" dialog then appears.
+
+**Decisions the design document must settle:**
+
+- top-level WebView with `event_delivery=redirect` (the default), or a
+  local iframe page with `event_delivery=message`
+- which recipients sign in the app (`custom`) and which are emailed
+- what the app shows for each outcome, and whether it shows its own result
+  screen (`redirect_delay` of `0`) or the ceremony's
+- how the app maps its own user to the recipient, and how it gets a
+  current URL when the signer returns
+
+**Two mistakes**
+
+- **Calling SignatureAPI from the app.** Anyone can unpack an app bundle
+  and read the API key. Create envelopes and ceremonies on the app's
+  server. Hand the app only that signer's ceremony URL. Do not log the URL
+  or store it on the device.
+- **Treating the WebView event as the outcome.** A ceremony event is a
+  signal for the UI, not proof. Confirm the outcome on the server by
+  reading the envelope or from a webhook before the app's flow moves on.

@@ -191,6 +191,76 @@ After it reports `walked: true`, confirm completion with `list_events`
 over REST. That is the same verification step as Branch A. Then
 `get_deliverables` returns the signed PDF and audit log.
 
+### Walk it the way an app embeds it
+
+Add `--embedded <redirect|message>` when the integration embeds the ceremony.
+The walk then also proves that the app would have received the result.
+
+    node scripts/complete-ceremony.mjs --envelope <id> --embedded redirect
+    node scripts/complete-ceremony.mjs --envelope <id> --embedded message
+
+- `redirect` loads the ceremony top-level with `embedded=true&event_delivery=redirect`.
+  This is how a native WebView loads it.
+  The script records each navigation to a `signatureapi-message:` URL through the browser's Navigation API.
+  That is the moment a WebView's navigation handler sees it.
+- `message` serves a local host page at one `embeddable_in` origin of the recipient.
+  The page frames the ceremony with `embedded=true&event_delivery=message`.
+  It accepts a message only from the ceremony's origin and from its own iframe.
+  Every other request to that origin is aborted, so no real host is contacted.
+
+Message mode picks the first usable `embeddable_in` entry:
+
+- An entry with a wildcard is skipped.
+- An entry without a scheme is read as https.
+- An https entry is used as is.
+- An http loopback entry is used as is: `localhost`, `127.0.0.1`, or `[::1]`.
+- Any other http entry is upgraded to https on the same host and port.
+  The ceremony's frame policy treats `http://host` as allowing `https://host` too.
+
+Without a usable entry it fails with `EMBED_ORIGIN_MISSING`.
+Create the ceremony with `embeddable_in` listing that origin, or use `redirect`.
+
+The frame counts as loaded only when two things hold.
+Its document has the ceremony's origin.
+It shows a known signer UI element.
+A frame the ceremony refuses to load fails with `EMBED_FRAME_BLOCKED`.
+The message names the chosen origin; list it in `embeddable_in`.
+
+An embedded walk never confirms the "Confirm to continue" dialog.
+That dialog means the signer UI saw no real pointer input.
+An app's signer always produces that input, so the walk fails with `ORGANIC_INPUT_NOT_ARMED`.
+
+Every flag takes `--name value` or `--name=value`.
+A flag given without a value fails with `INVALID_FLAG_VALUE`.
+
+The script reads events from the delivery mechanism only, never from console output.
+It requires exactly one `ceremony.completed` event through the chosen mode.
+Then it still polls the API for the recipient's status.
+The success output adds `event` with `type` and `via`.
+
+Failure codes for this mode:
+
+- `INVALID_EMBEDDED_MODE`: the flag value is not `redirect` or `message`.
+- `INVALID_FLAG_VALUE`: `--url`, `--envelope`, `--recipient` or `--timeout` has no usable value.
+- `RECIPIENT_KEY_UNRESOLVED`: the script cannot tell which recipient it drives.
+  Pass `--recipient <key>`.
+- `EMBED_ORIGIN_MISSING`: no usable `embeddable_in` origin for message mode.
+- `EMBED_HOST_PAGE_FAILED`: the local host page could not be served.
+- `EMBED_FRAME_BLOCKED`: the ceremony did not load in the host page frame.
+  Add the named origin to `embeddable_in`.
+- `NAVIGATION_API_UNAVAILABLE`: the browser cannot report the redirect event.
+  Reinstall Chromium with `npx playwright install chromium`.
+- `CEREMONY_EVENT_NOT_DELIVERED`: no event reached the page.
+- `CEREMONY_EVENT_UNEXPECTED`: a different event, more than one, or the wrong mode.
+  A `ceremony.failed` event names its error type in the message.
+  A step that never appears after such an event reports this code, not `CEREMONY_WALK_STEP_NOT_FOUND`.
+- `ORGANIC_INPUT_NOT_ARMED`: the "Confirm to continue" dialog appeared.
+  Produce real pointer input over the ceremony before Finish.
+- `CEREMONY_WALK_ERROR`: an unexpected browser error stopped the walk.
+
+An embedded walk also refuses any control labelled Cancel.
+Embedded signers see Cancel instead of Decline.
+
 ## Admit the genuine deliverable
 
 Status, events, parser success, and malware scanning prove different facts.

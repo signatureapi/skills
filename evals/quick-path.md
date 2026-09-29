@@ -17,7 +17,7 @@
 - Reads the code and proposes one design with evidence.
 - Asks only for decisions that change the data model, authentication or who
   receives email and that the prompt left open. At most four, grouped.
-- Does not present three shapes or a menu of alternatives.
+- Does not present the four shapes or a menu of alternatives.
 - Writes no application code.
 - The design document, if written, follows the template: a starting point
   with departures, a vocabulary table, and a product-coverage section. It

@@ -17,8 +17,8 @@ envelope works. Field names come from the spec; check them there.
   When the app emails a link it creates on open, point the email at an app
   page that creates the ceremony when the signer clicks.
 - Ceremony links expire, after 30 days by default. For embedded signing,
-  create the ceremony just before you show it. For an emailed link, resend
-  it instead of reusing an old one.
+  create the ceremony once. Before each show, read the envelope for a
+  fresh URL. For an emailed link, resend it instead of reusing an old one.
 
 ## Custom authentication
 
@@ -35,10 +35,91 @@ when they authenticated. Read the exact shape with
   development. A missing origin fails with a `frame-ancestors` CSP error.
 - Append `embedded=true&event_delivery=message` to the ceremony URL. The
   ceremony then posts its result to the parent window with `postMessage`.
-  Check the message's origin before trusting it.
+  Accept a message only when `event.origin` is
+  `https://sign.signatureapi.com` and `event.source` is the ceremony
+  iframe's `contentWindow`.
+- Treat the event as a UI signal, not proof. Confirm the outcome from your
+  server before acting on it (see the mobile section below).
 - An embedded ceremony ignores `redirect_url`. The app learns the outcome
   from the posted message and from webhooks.
 - For SMS or chat delivery, set `url_variant` to `short`.
+
+## Native mobile apps
+
+Load the ceremony in a WebView. Full guides:
+[iOS](https://signatureapi.com/docs/embedded/ios),
+[Android](https://signatureapi.com/docs/embedded/android),
+[React Native](https://signatureapi.com/docs/embedded/react-native), and
+the [overview](https://signatureapi.com/docs/api/guides/how-to/embed-mobile).
+A runnable example is the
+[demo repository](https://github.com/signatureapi/signatureapi-mobile-integration-demo).
+Give the user the link to their platform's guide in your reply.
+
+- Create the ceremony on your server. Use `custom` authentication so the
+  API returns `ceremony.url` instead of emailing it. Never call the API
+  from the app: a key in an app bundle leaks.
+- Prefer a top-level WebView. The ceremony is the WebView's page, so
+  `embeddable_in` is not needed. Append
+  `embedded=true&event_delivery=redirect` to the URL.
+- Leave `redirect_url` unset. Embedded ceremonies ignore it. Set
+  `redirect_delay` to `0` when the app shows its own result screen.
+  It is a ceremony property that your server sets, not a URL parameter.
+  The default is 3 seconds and the maximum is 20.
+- Redirect delivery is a client-side navigation to
+  `signatureapi-message://<event type>/`. Catch it in
+  `WKNavigationDelegate.webView(_:decidePolicyFor:decisionHandler:)` on
+  iOS or `WebViewClient.shouldOverrideUrlLoading` on Android. Cancel the
+  navigation, then parse the URL. HTTP-layer hooks such as `URLProtocol`
+  and `shouldInterceptRequest` never see it.
+- The event type is the URL host. Failures add `error_type` and
+  `error_message` as query parameters. Events are `ceremony.completed`,
+  `ceremony.canceled`, `ceremony.declined`, and `ceremony.failed`.
+- Branch on `error_type`. Treat an unknown value as a generic failure.
+  Do not show `error_message` to signers or branch on it. The ceremony
+  already shows a translated message. The values are listed at
+  [ceremony events](https://signatureapi.com/docs/embedded/ceremony-events#error-types).
+- Use a local page with an iframe only when the app needs `message`
+  delivery. List the page's origin in `embeddable_in`. A synthetic https
+  base URL works, such as `https://app.example.invalid`. Use
+  `event_delivery=message` in the iframe URL, and check `event.origin` and
+  `event.source` as above. Forward accepted messages to native code with
+  `WKScriptMessageHandler` on iOS or `WebViewCompat.addWebMessageListener`
+  on Android.
+- Confirm the outcome on your server before acting. Read the envelope
+  (`GET /envelopes/{envelopeId}`) or wait for a webhook. See
+  [Confirm the outcome on your server](https://signatureapi.com/docs/embedded/ceremony-events#confirm-the-outcome-on-your-server).
+- Change no WebView storage settings. The ceremony uses no cookies,
+  `localStorage`, `sessionStorage` or IndexedDB. JavaScript must be on.
+  Allow these hosts: `sign.signatureapi.com`, `api.signatureapi.com`,
+  `vault.signatureapi.com`, `fonts.googleapis.com`, `fonts.gstatic.com`.
+  See [browser requirements](https://signatureapi.com/docs/embedded/introduction#browser-requirements).
+- Keep the WebView alive across rotation. Recreating it reloads the
+  ceremony, and the signer loses their progress. On Android, declare
+  `android:configChanges` for orientation and screen size on the
+  activity. Do not rely on `WebView.saveState`: it keeps the history,
+  not the page, so the ceremony reloads.
+- On iOS, reload the same URL in `webViewWebContentProcessDidTerminate`.
+  iOS can end the web process while the app is in the background.
+- Open links that leave the ceremony in the system browser. On iOS, these
+  are navigations whose `targetFrame` is `nil`.
+- The ceremony URL is a bearer credential. Do not log it or store it on
+  the device. To resume, ask your server for the recipient's current URL.
+  A new read of the envelope returns a fresh `standard` URL, and earlier
+  URLs work until they expire. Creating a new ceremony revokes them all.
+  See [the ceremony URL](https://signatureapi.com/docs/api/resources/ceremonies/ceremony-url#a-new-url-on-every-read).
+- A revoked or completed URL still loads with HTTP 200. The page reports
+  the failure as `ceremony.failed`. Never check a URL with a plain HTTP
+  request.
+- UI tests need real input. The ceremony arms completion only after a
+  touch, a key press, a scroll-wheel turn, or a pointer moving across
+  several positions. Otherwise Finish opens a "Confirm to continue"
+  dialog. Use XCUITest taps or UiAutomator gestures. JavaScript clicks
+  such as Espresso-Web `webClick()` do not count. Do not confirm the
+  dialog: if it appears, the test is not acting like a signer. Assert on
+  the delivered event, never on console output. See
+  [automated testing](https://signatureapi.com/docs/embedded/introduction#automated-testing).
+- Add one UI test that signs through the ceremony with real input. Assert
+  on the app's result screen, which only the delivered event triggers.
 
 ## Recipients after creation
 
