@@ -78,13 +78,31 @@ Give the user the link to their platform's guide in your reply.
   Do not show `error_message` to signers or branch on it. The ceremony
   already shows a translated message. The values are listed at
   [ceremony events](https://signatureapi.com/docs/embedded/ceremony-events#error-types).
-- Use a local page with an iframe only when the app needs `message`
-  delivery. List the page's origin in `embeddable_in`. A synthetic https
-  base URL works, such as `https://app.example.invalid`. Use
+- Redirect stays the default. To get a JavaScript message instead, load
+  the ceremony top-level with `event_delivery=message`. Set no
+  `embeddable_in`. Install a script at document start, in the main frame
+  only. It forwards a message to native code only when `event.origin` is
+  `https://sign.signatureapi.com` and `event.source === window`. Forward
+  only terminal event types, because the page can message itself.
+  - On iOS, use a `WKUserScript` at `.atDocumentStart` with
+    `forMainFrameOnly: true`, plus a `WKScriptMessageHandler`. In the
+    handler, check `message.frameInfo.isMainFrame` and that the sender's
+    origin host is `sign.signatureapi.com`.
+  - On Android, use `WebViewCompat.addDocumentStartJavaScript` and
+    `WebViewCompat.addWebMessageListener`, both allowed for the ceremony
+    origin. Check `WebViewFeature` support first. Fall back to redirect
+    when either feature is missing.
+  - Guides:
+    [iOS](https://signatureapi.com/docs/embedded/ios#use-message-delivery-instead)
+    and
+    [Android](https://signatureapi.com/docs/embedded/android#use-message-delivery-instead).
+- Use a local page with an iframe when you share a web SDK page with the
+  app. List the page's origin in `embeddable_in`. A synthetic https base
+  URL works, such as `https://app.example.invalid`. Use
   `event_delivery=message` in the iframe URL, and check `event.origin` and
-  `event.source` as above. Forward accepted messages to native code with
-  `WKScriptMessageHandler` on iOS or `WebViewCompat.addWebMessageListener`
-  on Android.
+  `event.source === iframe.contentWindow`. Forward accepted messages to
+  native code with `WKScriptMessageHandler` on iOS or
+  `WebViewCompat.addWebMessageListener` on Android.
 - Confirm the outcome on your server before acting. Read the envelope
   (`GET /envelopes/{envelopeId}`) or wait for a webhook. See
   [Confirm the outcome on your server](https://signatureapi.com/docs/embedded/ceremony-events#confirm-the-outcome-on-your-server).

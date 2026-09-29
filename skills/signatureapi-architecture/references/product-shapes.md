@@ -255,13 +255,15 @@ The app's server talks to SignatureAPI; the app itself never does.
    revocation, `POST /recipients/{recipientId}/ceremonies` issues a new
    one, as in Shape 2.
 
-The alternative is a local page in the app that holds the ceremony in an
-iframe. List that page's origin in `embeddable_in`; a made-up https base
-URL works. Load the ceremony with `event_delivery=message`. The page
-accepts a message only when its origin is `https://sign.signatureapi.com`
-and its source is the iframe's window. It then forwards the message to
-native code. Prefer the top-level WebView. The rules are in the "Native
-mobile apps" section of `../../signatureapi-integrate/references/ceremonies.md`.
+Two alternatives exist. To receive a JavaScript message with no iframe,
+load the ceremony top-level with `event_delivery=message`. Set no
+`embeddable_in`. A document-start script forwards only terminal events,
+and only from `https://sign.signatureapi.com` with `event.source ===
+window`. To share a web SDK page, use a local page with an iframe. List
+its origin in `embeddable_in`, and accept a message only from the ceremony
+origin and the iframe's window. Prefer the top-level redirect. The rules
+are in the "Native mobile apps" section of
+`../../signatureapi-integrate/references/ceremonies.md`.
 Per-platform code is in the
 [iOS](https://signatureapi.com/docs/embedded/ios) and
 [Android](https://signatureapi.com/docs/embedded/android) guides.
