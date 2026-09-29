@@ -6,14 +6,14 @@
       "type": "skill-md",
       "description": "Use when someone wants to add e-signatures or SignatureAPI to an app and the signing flow is not decided yet. Decides who signs, how they prove it is them, and what happens after. Also for a signing product or \\\"a platform like DocuSign\\\", even when the user knows no SignatureAPI terms. Writes a design brief or document, no code. Needs no API key.",
       "url": "https://raw.githubusercontent.com/signatureapi/skills/main/skills/signatureapi-architecture/SKILL.md",
-      "digest": "sha256:792423452a0dc1d01b39c60f247529b96824b3fcab2161746b06e25c091f9511"
+      "digest": "sha256:e52b84257850eca2f013dfffa781e6af045d2bfed8fc9700b3110ef072ec5faf"
     },
     {
       "name": "signatureapi-diagnose",
       "type": "skill-md",
       "description": "Use when an existing SignatureAPI integration misbehaves. Covers an envelope stuck in processing, a missing webhook or signing email, an invalid or expired link, a missing signed document, or a 4xx error. Use it even for one missing email; test mode never sends real email. Read-only; safe on live envelopes.",
       "url": "https://raw.githubusercontent.com/signatureapi/skills/main/skills/signatureapi-diagnose/SKILL.md",
-      "digest": "sha256:6cb5c9dad09333904c6891eb3d5cf5f5d620480ea6f4e1b97ff1d86ec82acb50"
+      "digest": "sha256:8a463ce38c104737163afcf7c94f594d82a9af4409e818b4f0db71bb33f5aca5"
     },
     {
       "name": "signatureapi-docs",
@@ -27,7 +27,7 @@
       "type": "skill-md",
       "description": "Use when writing or changing code that calls SignatureAPI once the signing flow is agreed. Covers creating envelopes, placing signature fields, handling SignatureAPI webhooks, embedding signing, and sending one test envelope. Use it even for a single envelope, and in hosts without a repository. Works in test mode.",
       "url": "https://raw.githubusercontent.com/signatureapi/skills/main/skills/signatureapi-integrate/SKILL.md",
-      "digest": "sha256:2d2de0e0e8a66179f556c2bedb618256a078270641e4e645deee024da02a813f"
+      "digest": "sha256:4e33d541d1c71970f5607c70aec65d09a8184b83fedd9f0dae79871144edea35"
     }
   ]
 }

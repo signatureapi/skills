@@ -122,3 +122,16 @@ test("signatureapi-docs navigates the live docs index and never answers from mem
   assert.match(text, /unverified/);
   assert.doesNotMatch(text, /llms-full\.txt/, "the skill never downloads the full corpus");
 });
+
+test("the other skills hand docs research to signatureapi-docs instead of repeating it", async () => {
+  for (const skill of ["signatureapi-architecture", "signatureapi-diagnose", "signatureapi-integrate"]) {
+    const text = await readFile(new URL(`${skill}/SKILL.md`, SKILLS), "utf8");
+    const start = headingIndex(text, /^## When to reach for something else/m);
+    assert.ok(start >= 0, `${skill}: missing "When to reach for something else"`);
+    const rest = text.slice(start + 1);
+    const section = rest.slice(0, rest.search(/^## /m));
+    assert.match(section, /`signatureapi-docs`/, `${skill}: name signatureapi-docs under "When to reach for something else"`);
+    assert.doesNotMatch(text, /`search_documentation` \(MCP\)/, `${skill}: send prose lookups to signatureapi-docs`);
+    assert.doesNotMatch(text, /Markdown twin/, `${skill}: page Markdown is the docs skill's job`);
+  }
+});
