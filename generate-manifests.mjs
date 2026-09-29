@@ -100,6 +100,7 @@ export function buildMarketplaceJson(skills) {
   return {
     name: "signatureapi",
     owner: AUTHOR,
+    description: DESCRIPTION,
     plugins: [
       {
         name: "signatureapi",

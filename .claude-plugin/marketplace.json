@@ -4,6 +4,7 @@
     "name": "SignatureAPI",
     "url": "https://signatureapi.com"
   },
+  "description": "SignatureAPI e-signature skills, kept in sync with the hosted MCP server configuration so the same install delivers both.",
   "plugins": [
     {
       "name": "signatureapi",
