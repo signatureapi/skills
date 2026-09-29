@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { gap, requireTestKey, resolveKey } from "../lib/output.mjs";
+import { apiBase, gap, requireTestKey, resolveKey } from "../lib/output.mjs";
 
 test("requireTestKey returns a test key unchanged", () => {
   assert.equal(requireTestKey("key_test_abc"), "key_test_abc");
@@ -78,4 +78,36 @@ test("gap records the operation, the fallback and where to report it", () => {
   assert.equal(g.gap, true);
   assert.equal(g.operation, "do the thing");
   assert.match(g.report_to, /github\.com\/signatureapi\/skills/);
+});
+
+function apiBaseExitCode(value) {
+  const exit = process.exit;
+  const log = console.log;
+  let printed = "";
+  process.exit = () => { throw new Error("exited"); };
+  console.log = (s) => { printed = s; };
+  try {
+    assert.throws(() => apiBase(value));
+  } finally {
+    process.exit = exit;
+    console.log = log;
+  }
+  return JSON.parse(printed).code;
+}
+
+test("apiBase defaults to production and accepts other SignatureAPI hosts", () => {
+  assert.equal(apiBase(undefined), "https://api.signatureapi.com/v1");
+  assert.equal(apiBase("https://api.staging.signatureapi.com/v1/"), "https://api.staging.signatureapi.com/v1");
+});
+
+test("apiBase refuses any host the API key must not reach", () => {
+  for (const value of [
+    "https://example.com/v1",
+    "https://signatureapi.com.example.com/v1",
+    "https://evilsignatureapi.com/v1",
+    "http://api.signatureapi.com/v1",
+    "not a url",
+  ]) {
+    assert.equal(apiBaseExitCode(value), "UNTRUSTED_BASE_URL", value);
+  }
 });

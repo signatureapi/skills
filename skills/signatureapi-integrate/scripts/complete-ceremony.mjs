@@ -17,9 +17,9 @@
 // click when it couldn't read a label; a swallowed selector error that
 // skipped a whole step while `noteFallbackIfUsed` still reported the
 // contract satisfied). None of that is allowed here anymore.
-import { ok, fail, requireTestKey } from "./lib/output.mjs";
+import { ok, fail, apiBase, requireTestKey } from "./lib/output.mjs";
 
-const API = process.env.SIGNATUREAPI_BASE_URL ?? "https://api.signatureapi.com/v1";
+const API = apiBase();
 
 function arg(name, fallback) {
   const i = process.argv.indexOf(`--${name}`);

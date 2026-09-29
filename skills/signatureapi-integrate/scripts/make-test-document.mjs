@@ -4,9 +4,9 @@
 // steps have a document URL without improvising an upload flow. Test-mode
 // tooling, not production code. Full workflow:
 // SKILL.md.
-import { ok, fail, requireTestKey } from "./lib/output.mjs";
+import { ok, fail, apiBase, requireTestKey } from "./lib/output.mjs";
 
-const API = process.env.SIGNATUREAPI_BASE_URL ?? "https://api.signatureapi.com/v1";
+const API = apiBase();
 
 /** A minimal one-page PDF carrying the [[signer_signature]] place marker. */
 export function buildPdf() {

@@ -147,10 +147,15 @@ SignatureAPI CLI (`npx signatureapi init`, `listen`).
 - **signatureapi-integrate works in test mode only.** A `key_live_` key is refused, and there is
   no flag or setting that bypasses this — the capability doesn't exist in the code. Test-mode
   envelopes are free, watermarked, not legally binding, and send no email to recipients.
-- **signatureapi-diagnose is read-only by construction.** Every script issues GET requests only,
-  and its `allowed-tools` frontmatter restricts it to read-only tools even if a script is added
-  later. It runs against either a test or a live key and reports which mode it resolved, so
-  diagnosing a production envelope during an incident is safe.
+- **signatureapi-diagnose is read-only by construction.** Every script issues GET requests only
+  (a test enforces it), and its `allowed-tools` frontmatter pre-approves only reading files and
+  fetching from signatureapi.com; running a script still asks for your approval. It runs against
+  either a test or a live key and reports which mode it resolved, so diagnosing a production
+  envelope during an incident is safe.
+- **Your API key only goes to SignatureAPI.** The scripts read `SIGNATUREAPI_KEY` from the
+  environment and send it only to `https://*.signatureapi.com`; they refuse any other
+  `SIGNATUREAPI_BASE_URL`.
+- **Privacy:** the plugin processes data under the [Data Processing Addendum](https://signatureapi.com/dpa).
 
 ## Docs
 

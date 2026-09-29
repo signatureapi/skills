@@ -3,9 +3,9 @@
 // SIGNATUREAPI_KEY is set, is a test key, and that the API is reachable —
 // the first step of the skill's Build sequence. Test-mode tooling, not
 // production code. Full workflow: SKILL.md.
-import { ok, fail, requireTestKey } from "./lib/output.mjs";
+import { ok, fail, apiBase, requireTestKey } from "./lib/output.mjs";
 
-const API = process.env.SIGNATUREAPI_BASE_URL ?? "https://api.signatureapi.com/v1";
+const API = apiBase();
 const key = requireTestKey(process.env.SIGNATUREAPI_KEY);
 
 const res = await fetch(`${API}/envelopes?limit=1`, { headers: { "X-API-Key": key } });
