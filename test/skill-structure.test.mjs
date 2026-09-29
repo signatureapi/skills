@@ -121,6 +121,8 @@ test("signatureapi-docs navigates the live docs index and never answers from mem
   assert.match(text, /Stop after three rounds/);
   assert.match(text, /unverified/);
   assert.doesNotMatch(text, /llms-full\.txt/, "the skill never downloads the full corpus");
+  assert.match(text, /verbatim/, "a summarizing fetch tool must be asked for the full text");
+  assert.match(text, /`curl -s/, "with a shell, fetch the raw page Markdown");
 });
 
 test("the other skills hand docs research to signatureapi-docs instead of repeating it", async () => {

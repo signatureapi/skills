@@ -52,6 +52,9 @@ session, even when you are sure of it.
    concepts. Choose by meaning. The user's words often differ from the
    page's words.
 4. Fetch each page as page Markdown. Read the whole page, not an excerpt.
+   Some fetch tools return a summary instead of the page. With a shell,
+   fetch the raw text with `curl -s <page URL>.md`. Otherwise ask the fetch
+   tool for the full text verbatim.
 5. Follow links in the page that bear on the question. Fetch them the same
    way.
 6. Check each claim you plan to make against the text you read.
