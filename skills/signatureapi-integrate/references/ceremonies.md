@@ -71,6 +71,13 @@ Give the user the link to their platform's guide in your reply.
   iOS or `WebViewClient.shouldOverrideUrlLoading` on Android. Cancel the
   navigation, then parse the URL. HTTP-layer hooks such as `URLProtocol`
   and `shouldInterceptRequest` never see it.
+- In React Native with `react-native-webview`, catch it in
+  `onShouldStartLoadWithRequest` and return `false`. Set
+  `originWhitelist={['*']}`, or the library hands the URL to the OS and no
+  handler sees it. Parse the event URL without `new URL()`. Under Hermes,
+  React Native's `URL` returns an empty host for this scheme, so every
+  event is lost. See the
+  [React Native guide](https://signatureapi.com/docs/embedded/react-native).
 - The event type is the URL host. Failures add `error_type` and
   `error_message` as query parameters. Events are `ceremony.completed`,
   `ceremony.canceled`, `ceremony.declined`, and `ceremony.failed`.
