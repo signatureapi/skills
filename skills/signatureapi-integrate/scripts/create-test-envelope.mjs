@@ -3,9 +3,9 @@
 // or creates a minimum viable test-mode envelope, for adapting into your
 // own create_envelope call. Test-mode tooling, not production code. Full
 // workflow: SKILL.md.
-import { ok, fail, requireTestKey } from "./lib/output.mjs";
+import { ok, fail, apiBase, requireTestKey } from "./lib/output.mjs";
 
-const API = process.env.SIGNATUREAPI_BASE_URL ?? "https://api.signatureapi.com/v1";
+const API = apiBase();
 
 export const AUTH_TYPES = ["custom", "email_code", "email_link"];
 

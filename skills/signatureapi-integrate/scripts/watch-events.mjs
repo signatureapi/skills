@@ -3,9 +3,9 @@
 // the MCP list_events tool: polls a test-mode envelope's events until it
 // reaches a terminal status, to confirm a ceremony actually completed.
 // Test-mode tooling, not production code. Full workflow: SKILL.md.
-import { ok, fail, requireTestKey } from "./lib/output.mjs";
+import { ok, fail, apiBase, requireTestKey } from "./lib/output.mjs";
 
-const API = process.env.SIGNATUREAPI_BASE_URL ?? "https://api.signatureapi.com/v1";
+const API = apiBase();
 
 export function isTerminal(status) {
   return ["completed", "failed", "canceled"].includes(status);

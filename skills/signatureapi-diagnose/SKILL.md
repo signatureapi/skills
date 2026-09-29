@@ -1,7 +1,7 @@
 ---
 name: signatureapi-diagnose
 description: "Use when an existing SignatureAPI integration misbehaves. Covers an envelope stuck in processing, a missing webhook or signing email, an invalid or expired link, a missing signed document, or a 4xx error. Use it even for one missing email; test mode never sends real email. Read-only; safe on live envelopes."
-allowed-tools: Bash, Read, Grep, WebFetch
+allowed-tools: Read, Grep, WebFetch(domain:signatureapi.com), WebFetch(domain:spec.signatureapi.com)
 inputs:
   - name: SIGNATUREAPI_KEY
     required: true

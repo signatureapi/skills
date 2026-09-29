@@ -44,6 +44,23 @@ const DESCRIPTION =
   "SignatureAPI e-signature skills, kept in sync with the hosted MCP server configuration so the same install delivers both.";
 const AUTHOR = { name: "SignatureAPI", url: "https://signatureapi.com" };
 const HOMEPAGE = "https://signatureapi.com";
+const PRIVACY_POLICY_URL = "https://signatureapi.com/dpa";
+const REPOSITORY = "https://github.com/signatureapi/skills";
+const DOCUMENTATION_URL = "https://signatureapi.com/docs";
+const SUPPORT_URL = "https://signatureapi.com/support";
+const TERMS_URL = "https://signatureapi.com/terms";
+// Search terms for directory listings, shared by every manifest.
+const KEYWORDS = [
+  "e-signature",
+  "esignature",
+  "electronic-signature",
+  "digital-signature",
+  "document-signing",
+  "signature-api",
+  "webhooks",
+  "mcp",
+  "signatureapi",
+];
 
 /** Pulls `name` and `description` out of a SKILL.md's YAML frontmatter with
  * a small regex reader (matching update-filemap.mjs's approach) rather than
@@ -89,8 +106,13 @@ export function buildPluginJson(skills, version) {
     description: DESCRIPTION,
     author: AUTHOR,
     homepage: HOMEPAGE,
+    repository: REPOSITORY,
+    documentationUrl: DOCUMENTATION_URL,
+    supportUrl: SUPPORT_URL,
+    privacyPolicyUrl: PRIVACY_POLICY_URL,
+    termsOfServiceUrl: TERMS_URL,
     license: "MIT",
-    keywords: skills.map((s) => s.name),
+    keywords: KEYWORDS,
     mcpServers: "./.mcp.json",
     hooks: CLAUDE_HOOKS_PATH,
   };
@@ -106,7 +128,9 @@ export function buildMarketplaceJson(skills) {
         name: "signatureapi",
         source: "./",
         description: DESCRIPTION,
-        keywords: skills.map((s) => s.name),
+        homepage: HOMEPAGE,
+        category: "development",
+        keywords: KEYWORDS,
       },
     ],
   };
@@ -136,7 +160,7 @@ export function buildCursorPluginJson(skills, version) {
     author: AUTHOR,
     homepage: HOMEPAGE,
     license: "MIT",
-    keywords: skills.map((s) => s.name),
+    keywords: KEYWORDS,
     mcpServers: buildMcpJson().mcpServers,
     hooks: CURSOR_HOOKS_PATH,
   };
@@ -153,7 +177,7 @@ export function buildEcosystemMarketplaceJson(skills) {
         name: "signatureapi",
         source: "./",
         description: DESCRIPTION,
-        keywords: skills.map((s) => s.name),
+        keywords: KEYWORDS,
       },
     ],
   };
@@ -169,7 +193,7 @@ export function buildGrokPluginJson(skills, version) {
     author: AUTHOR,
     homepage: HOMEPAGE,
     license: "MIT",
-    keywords: skills.map((s) => s.name),
+    keywords: KEYWORDS,
     mcpServers: "./.mcp.json",
   };
 }
@@ -188,7 +212,7 @@ export function buildCodexPluginJson(skills, version) {
     author: AUTHOR,
     homepage: HOMEPAGE,
     license: "MIT",
-    keywords: skills.map((s) => s.name),
+    keywords: KEYWORDS,
     skills: "./skills/",
     mcpServers: "./.codex-plugin/mcp-servers.json",
     hooks: CODEX_HOOKS_PATH,
@@ -217,7 +241,7 @@ export function buildCodexMarketplaceJson(skills) {
         name: "signatureapi",
         source: "./",
         description: DESCRIPTION,
-        keywords: skills.map((s) => s.name),
+        keywords: KEYWORDS,
         policy: { installation: "AVAILABLE", authentication: "ON_INSTALL" },
       },
     ],
@@ -256,7 +280,7 @@ export function buildAgentPluginsPluginJson(skills, version) {
     author: AUTHOR,
     homepage: HOMEPAGE,
     license: "MIT",
-    keywords: skills.map((s) => s.name),
+    keywords: KEYWORDS,
   };
 }
 

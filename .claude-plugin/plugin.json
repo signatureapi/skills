@@ -1,18 +1,29 @@
 {
   "name": "signatureapi",
   "displayName": "SignatureAPI",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "SignatureAPI e-signature skills, kept in sync with the hosted MCP server configuration so the same install delivers both.",
   "author": {
     "name": "SignatureAPI",
     "url": "https://signatureapi.com"
   },
   "homepage": "https://signatureapi.com",
+  "repository": "https://github.com/signatureapi/skills",
+  "documentationUrl": "https://signatureapi.com/docs",
+  "supportUrl": "https://signatureapi.com/support",
+  "privacyPolicyUrl": "https://signatureapi.com/dpa",
+  "termsOfServiceUrl": "https://signatureapi.com/terms",
   "license": "MIT",
   "keywords": [
-    "signatureapi-architecture",
-    "signatureapi-diagnose",
-    "signatureapi-integrate"
+    "e-signature",
+    "esignature",
+    "electronic-signature",
+    "digital-signature",
+    "document-signing",
+    "signature-api",
+    "webhooks",
+    "mcp",
+    "signatureapi"
   ],
   "mcpServers": "./.mcp.json",
   "hooks": "./hooks/claude-hooks.json"

@@ -4,9 +4,9 @@
 // steps. Read-only diagnostic tooling (works against either a test or a
 // live key, GET requests only), not production code. Full runbook:
 // SKILL.md.
-import { ok, fail, resolveKey } from "./lib/output.mjs";
+import { ok, fail, apiBase, resolveKey } from "./lib/output.mjs";
 
-const API = process.env.SIGNATUREAPI_BASE_URL ?? "https://api.signatureapi.com/v1";
+const API = apiBase();
 
 export function verdict({ envelope, events, recipients }) {
   const types = events.map((e) => e.type);

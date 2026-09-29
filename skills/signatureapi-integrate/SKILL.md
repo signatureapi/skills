@@ -131,8 +131,7 @@ the chat. No MCP tool returns a credential.
 Pass the env file with `--env-file` to every script. Never `cat`, `source`
 or `export` it, never ask the user to paste the key, and never put the key
 in code, a commit, a log or a command argument. Leave
-`SIGNATUREAPI_BASE_URL` and `SIGNATUREAPI_SPEC_URL` unset; the scripts send
-the key to whatever host they name.
+`SIGNATUREAPI_BASE_URL` and `SIGNATUREAPI_SPEC_URL` unset.
 
 ## Start from the design
 

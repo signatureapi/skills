@@ -50,6 +50,31 @@ export function requireTestKey(key) {
 }
 
 /**
+ * The API base URL the scripts send SIGNATUREAPI_KEY to. SIGNATUREAPI_BASE_URL
+ * may pick another SignatureAPI environment (for example staging), but only an
+ * https URL on signatureapi.com or one of its subdomains: the key never leaves
+ * SignatureAPI's own hosts, whatever the environment says.
+ */
+export function apiBase(value = process.env.SIGNATUREAPI_BASE_URL) {
+  if (!value) return "https://api.signatureapi.com/v1";
+  let url;
+  try {
+    url = new URL(value);
+  } catch {
+    url = null;
+  }
+  const host = url?.hostname ?? "";
+  if (url?.protocol !== "https:" || !(host === "signatureapi.com" || host.endsWith(".signatureapi.com"))) {
+    fail(
+      "UNTRUSTED_BASE_URL",
+      "SIGNATUREAPI_BASE_URL must be an https URL on signatureapi.com. The scripts send your API key there, so they refuse any other host.",
+      ["unset SIGNATUREAPI_BASE_URL"],
+    );
+  }
+  return value.replace(/\/+$/, "");
+}
+
+/**
  * For read-only scripts only: unlike requireTestKey, this accepts either a
  * test or a live key — there is nothing here to abuse a live key with, since
  * the caller must issue only GET requests. Returns the resolved mode

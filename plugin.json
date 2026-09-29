@@ -1,7 +1,7 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "signatureapi",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "SignatureAPI e-signature skills, kept in sync with the hosted MCP server configuration so the same install delivers both.",
   "author": {
     "name": "SignatureAPI",
@@ -10,8 +10,14 @@
   "homepage": "https://signatureapi.com",
   "license": "MIT",
   "keywords": [
-    "signatureapi-architecture",
-    "signatureapi-diagnose",
-    "signatureapi-integrate"
+    "e-signature",
+    "esignature",
+    "electronic-signature",
+    "digital-signature",
+    "document-signing",
+    "signature-api",
+    "webhooks",
+    "mcp",
+    "signatureapi"
   ]
 }
