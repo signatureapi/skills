@@ -77,7 +77,7 @@ test("signatureapi-integrate starts from the design: the gate precedes Orient an
 test("every file under each skill's references/ is listed in that skill's References list", async () => {
   const dirents = await readdir(SKILLS, { withFileTypes: true });
   const skills = dirents.filter((d) => d.isDirectory()).map((d) => d.name);
-  assert.deepEqual(skills.sort(), ["signatureapi-architecture", "signatureapi-diagnose", "signatureapi-integrate"]);
+  assert.deepEqual(skills.sort(), ["signatureapi-architecture", "signatureapi-diagnose", "signatureapi-docs", "signatureapi-integrate"]);
   for (const skill of skills) {
     const text = await readFile(new URL(`${skill}/SKILL.md`, SKILLS), "utf8");
     const referencesSection = text.slice(headingIndex(text, /^## References/m));
@@ -85,4 +85,40 @@ test("every file under each skill's references/ is listed in that skill's Refere
     const missing = files.filter((f) => f.endsWith(".md")).filter((f) => !referencesSection.includes(`\`references/${f}\``));
     assert.deepEqual(missing, [], `${skill}: add these to the References list in SKILL.md: ${missing.join(", ")}`);
   }
+});
+
+test("signatureapi-docs navigates the live docs index and never answers from memory", async () => {
+  const text = await readFile(new URL("signatureapi-docs/SKILL.md", SKILLS), "utf8");
+  const frontmatter = text.match(/^---\n([\s\S]*?)\n---/)[1];
+  assert.match(frontmatter, /^name: signatureapi-docs$/m);
+  assert.doesNotMatch(frontmatter, /^inputs:/m, "the docs skill must not require an API key");
+  assert.match(frontmatter, /^allowed-tools: WebFetch\(domain:signatureapi\.com\)$/m);
+  assert.match(frontmatter, /even when you think you know the answer/);
+
+  const order = [
+    /^## Purpose/m,
+    /^## When to reach for something else/m,
+    /^## Keep the user's vocabulary/m,
+    /^## Sources, in order/m,
+    /^## Find the pages/m,
+    /^## Answer/m,
+    /^## Vocabulary/m,
+  ];
+  const positions = order.map((p) => headingIndex(text, p));
+  positions.forEach((pos, i) => assert.ok(pos >= 0, `missing heading ${order[i]}`));
+  for (let i = 1; i < positions.length; i++) assert.ok(positions[i - 1] < positions[i], `heading ${order[i]} is out of order`);
+
+  const reachFor = text.slice(positions[1], positions[2]);
+  assert.match(reachFor, /openapi-explore\.mjs/, "field-level questions go to the OpenAPI spec");
+
+  assert.ok(text.includes("https://signatureapi.com/llms.txt"));
+  assert.ok(
+    text.indexOf("llms.txt") < text.indexOf("search_documentation"),
+    "the index comes before the keyword search",
+  );
+  assert.match(text, /Memory is not a source/);
+  assert.match(text, /Choose by meaning/);
+  assert.match(text, /Stop after three rounds/);
+  assert.match(text, /unverified/);
+  assert.doesNotMatch(text, /llms-full\.txt/, "the skill never downloads the full corpus");
 });
