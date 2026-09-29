@@ -116,6 +116,9 @@ Claude Code, Codex and Cursor each read their own file under `hooks/`. All of th
 - **[signatureapi-diagnose](skills/signatureapi-diagnose)** — diagnose an integration that
   misbehaves: an envelope stuck in processing, a webhook that never arrived, a recipient who
   never got the signing email, a missing deliverable, or a validation error on create.
+- **[signatureapi-docs](skills/signatureapi-docs)** — answer SignatureAPI questions from the
+  current docs: finds pages through the docs index by meaning, reads them in full, and links
+  every claim. The other skills use it for docs questions. Needs no API key.
 
 Skills are written in plain language and stay timeless and public; `STYLE.md` has the rules and `npm test` checks them.
 
