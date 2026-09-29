@@ -20,7 +20,7 @@
       "type": "skill-md",
       "description": "Use when a question about SignatureAPI needs a documented answer: how a feature works, what the API accepts, webhook behavior, signing flows, limits, or why something happened. Use it even when you think you know the answer, and even when the user knows no SignatureAPI terms. Not for other vendors' docs.",
       "url": "https://raw.githubusercontent.com/signatureapi/skills/main/skills/signatureapi-docs/SKILL.md",
-      "digest": "sha256:ba726daa0dbb0a47b0c63d53a284488ec6ce99dd85c73c265b7aa73fac9ab2f4"
+      "digest": "sha256:496548244d4a0fda88cd768c23a0165470e6734c7d18f05ad7305c6ce3aecbc7"
     },
     {
       "name": "signatureapi-integrate",

@@ -123,6 +123,11 @@ test("signatureapi-docs navigates the live docs index and never answers from mem
   assert.doesNotMatch(text, /llms-full\.txt/, "the skill never downloads the full corpus");
   assert.match(text, /verbatim/, "a summarizing fetch tool must be asked for the full text");
   assert.match(text, /`curl -s/, "with a shell, fetch the raw page Markdown");
+  assert.match(text, /returns that page in full/, "hosts without URL fetch read whole pages through search_documentation");
+  assert.match(text, /`curl -s -o/, "save the raw page to a file so shell output limits cannot cut it");
+  assert.match(text, /Do not search it for\s+keywords/, "a saved page is read, not grepped");
+  assert.match(text, /temporary directory/, "saved pages never land in the user's project");
+  assert.doesNotMatch(text, /node \.\.\/signatureapi-integrate/, "a relative script path breaks outside the skill directory");
 });
 
 test("the other skills hand docs research to signatureapi-docs instead of repeating it", async () => {

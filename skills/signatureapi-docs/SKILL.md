@@ -15,8 +15,9 @@ and in full. Keep no copy between questions.
 ## When to reach for something else
 
 - **Field names, types and allowed values** come from the OpenAPI spec.
-  Query it with `node ../signatureapi-integrate/scripts/openapi-explore.mjs`,
-  or read `https://spec.signatureapi.com/openapi.yaml`.
+  Query it with the `openapi-explore.mjs` script bundled with
+  `signatureapi-integrate`. Without a shell, read
+  `https://spec.signatureapi.com/openapi.yaml`.
 - **Deciding how an app should use SignatureAPI** belongs to
   `signatureapi-architecture`.
 - **Writing code that calls SignatureAPI** belongs to
@@ -37,7 +38,9 @@ an event, or a page title.
    `https://signatureapi.com/llms.txt`. Fetch each page as page Markdown.
 2. `search_documentation` on the SignatureAPI MCP server. Use it only for
    an exact string: an error message, an event name, a field name. Its
-   index can lag the live pages.
+   index can lag the live pages. With `page` set to a page path from the
+   docs index, it returns that page in full. Use this when you cannot fetch
+   URLs.
 3. A web search limited to `site:signatureapi.com`.
 
 Memory is not a source. Do not state a fact you did not read in this
@@ -53,8 +56,11 @@ session, even when you are sure of it.
    page's words.
 4. Fetch each page as page Markdown. Read the whole page, not an excerpt.
    Some fetch tools return a summary instead of the page. With a shell,
-   fetch the raw text with `curl -s <page URL>.md`. Otherwise ask the fetch
-   tool for the full text verbatim.
+   save the raw text with `curl -s -o <file> <page URL>.md`. Put the file
+   in a temporary directory, never in the user's project. Read the file in
+   full, in parts if the host limits output. Do not search it for
+   keywords. Otherwise ask the fetch tool for the full text verbatim. Read
+   the docs index the same way.
 5. Follow links in the page that bear on the question. Fetch them the same
    way.
 6. Check each claim you plan to make against the text you read.
