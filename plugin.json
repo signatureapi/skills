@@ -1,8 +1,8 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "signatureapi",
-  "version": "1.2.0",
-  "description": "SignatureAPI e-signature skills, kept in sync with the hosted MCP server configuration so the same install delivers both.",
+  "version": "1.2.1",
+  "description": "SignatureAPI is an e-signature API for developers: send documents for signature, embed signing in your app, and track progress with webhooks. This plugin adds skills to design, build and troubleshoot your integration, plus the hosted MCP server.",
   "author": {
     "name": "SignatureAPI",
     "url": "https://signatureapi.com"
