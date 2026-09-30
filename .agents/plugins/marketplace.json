@@ -8,7 +8,7 @@
     {
       "name": "signatureapi",
       "source": "./",
-      "description": "SignatureAPI is an e-signature API for developers: send documents for signature, embed signing in your app, and track progress with webhooks. This plugin adds skills to design, build and troubleshoot your integration, plus the hosted MCP server.",
+      "description": "SignatureAPI is an e-signature API for developers: send documents for signature, embed signing in your app, and track progress with webhooks. This plugin adds skills to design, build and troubleshoot your integration and answer questions from the docs, plus the hosted MCP server.",
       "keywords": [
         "e-signature",
         "esignature",

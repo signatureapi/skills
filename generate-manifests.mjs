@@ -42,10 +42,10 @@ export const MCP_URL = "https://mcp.signatureapi.com/mcp";
 const SERVER_NAME = "signatureapi";
 const PRODUCT =
   "SignatureAPI is an e-signature API for developers: send documents for signature, embed signing in your app, and track progress with webhooks.";
-const DESCRIPTION = `${PRODUCT} This plugin adds skills to design, build and troubleshoot your integration, plus the hosted MCP server.`;
+const DESCRIPTION = `${PRODUCT} This plugin adds skills to design, build and troubleshoot your integration and answer questions from the docs, plus the hosted MCP server.`;
 // Codex shows these in its plugin browser in place of `description`.
 const SHORT_DESCRIPTION = "E-signature API for developers. Design, build and troubleshoot signing flows.";
-const LONG_DESCRIPTION = `${PRODUCT} Three skills design the signing flow, build and test the integration, and diagnose one that misbehaves. Test mode sends no real email. The hosted MCP server, signed in with OAuth, lets the agent create and inspect envelopes directly.`;
+const LONG_DESCRIPTION = `${PRODUCT} Four skills design the signing flow, build and test the integration, diagnose one that misbehaves, and answer questions from the current docs. Test mode sends no real email. The hosted MCP server, signed in with OAuth, lets the agent create and inspect envelopes directly.`;
 const DEFAULT_PROMPTS = [
   "Add e-signatures to this app with SignatureAPI.",
   "Send a test envelope and show me the signing link.",
