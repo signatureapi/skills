@@ -76,8 +76,21 @@ check.
   logged-in signers.
 - "Send them back to our site when they are done" → `redirect_url`, with the
   outcome and ids as query parameters.
+- "Inside our iPhone or Android app" → native embedding (Shape 4 in
+  `product-shapes.md`). The app's server creates the ceremony with
+  `custom` authentication. The app loads it in a WebView and catches the
+  result. No `redirect_url`. Only for signers logged in to the app.
 
-Ask when the app has a frontend; it changes what the signer sees.
+The codebase may have an iOS or Android app, or the journey may mention a
+phone. Then ask first: "Do your signers use your iPhone or Android app to
+sign?" For a yes, ask one follow-up:
+
+- "When they finish, should your app show its own screen right away?" Yes
+  → `redirect_delay` of `0`. No → the signing page shows its result for a
+  few seconds first.
+
+Ask when the app has a web or mobile frontend; it changes what the signer
+sees.
 
 ## When everyone has signed, what should happen?
 

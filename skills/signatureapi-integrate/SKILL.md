@@ -249,7 +249,7 @@ failures carry `code`, `message` and `next`.
 | `make-test-document.mjs` | Uploads a throwaway test PDF |
 | `create-test-envelope.mjs` | Prints (`--dry-run`) or creates a minimum test envelope |
 | `watch-events.mjs` | REST fallback for `list_events` (`--once` for one check) |
-| `complete-ceremony.mjs` | Branch B browser walk; test mode only |
+| `complete-ceremony.mjs` | Branch B browser walk; test mode only (`--embedded redirect` or `message` also checks the event) |
 
 ## References
 

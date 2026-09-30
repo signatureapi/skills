@@ -43,5 +43,10 @@
   "key_prefixes": [
     "key_test_"
   ],
-  "$comment_mcp_tool_outputs": "timed_out is a list_events output field; signing_secret_dashboard_url is a create_webhook output field. Neither is a REST field."
+  "$comment_mcp_tool_outputs": "timed_out is a list_events output field; signing_secret_dashboard_url is a create_webhook output field. Neither is a REST field.",
+  "$comment_ceremony_event_fields": "error_type and error_message are fields of the ceremony.failed event an embedded ceremony sends to the host app (a postMessage payload or signatureapi-message:// query parameters). They belong to the ceremony event contract documented at https://signatureapi.com/docs/embedded/ceremony-events, not to the REST API, so the OpenAPI spec does not define them.",
+  "ceremony_event_fields": [
+    "error_type",
+    "error_message"
+  ]
 }

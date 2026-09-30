@@ -45,6 +45,7 @@ design gate in `signatureapi-integrate`.
 | `novice-end-to-end.md` | A user who knows no SignatureAPI term reaches a working test integration |
 | `activation.md` | Each skill loads on its own prompts and stays out of near misses |
 | `support-gotchas.md` | The integration mistakes customers made most often |
+| `mobile-embedding.md` | Signing inside a native iOS or Android app: top-level WebView, redirect interception, server confirmation |
 
 ## Other hosts
 
@@ -53,7 +54,7 @@ conversation rules, run at least experience-first, vocabulary-and-hybrid
 and novice-end-to-end with Codex as well:
 
     npx -y skills@latest add <path to this repo> --agent codex -y
-    codex exec --full-auto "<prompt>" > out.txt
+    codex exec -s workspace-write "<prompt>" > out.txt
 
 Continue a Codex run with `codex exec resume --last "<answer>"`. Score the
 same rubrics. A host without a shell or a filesystem (ChatGPT) cannot run
