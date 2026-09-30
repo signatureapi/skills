@@ -2,8 +2,8 @@
 
 The unit tests check structure, identifiers and wording. They cannot check
 whether a fresh agent behaves the way the skills say. These scenarios do.
-Run them before publishing a change to `signatureapi-architecture` or the
-design gate in `signatureapi-integrate`.
+Run them before publishing a change to `signatureapi-architecture`,
+`signatureapi-docs`, or the design gate in `signatureapi-integrate`.
 
 ## How to run one
 
@@ -45,6 +45,7 @@ design gate in `signatureapi-integrate`.
 | `novice-end-to-end.md` | A user who knows no SignatureAPI term reaches a working test integration |
 | `activation.md` | Each skill loads on its own prompts and stays out of near misses |
 | `support-gotchas.md` | The integration mistakes customers made most often |
+| `docs-research.md` | Answers from pages fetched through the docs index, with links, in the user's words |
 | `mobile-embedding.md` | Signing inside a native iOS or Android app: top-level WebView, redirect interception, server confirmation |
 
 ## Other hosts

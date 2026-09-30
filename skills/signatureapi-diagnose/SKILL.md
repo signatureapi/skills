@@ -19,6 +19,9 @@ the envelope and its events in one pass and prints a verdict with next steps.
 - **Building a new signing flow** (creating envelopes, placing signature
   fields, wiring up a webhook for the first time) belongs to
   `signatureapi-integrate`.
+- **How SignatureAPI is documented to behave** belongs to
+  `signatureapi-docs`. Use it to compare an envelope's state with the
+  documented behavior.
 - **A webhook that is not a SignatureAPI webhook** belongs to whatever sent
   it. The symptoms and event shapes below are specific to SignatureAPI.
 - **A different e-signature vendor** (DocuSign, Dropbox Sign, Adobe Sign,
@@ -36,10 +39,11 @@ depend on them. The application integrates against the REST API
 use MCP first (`https://mcp.signatureapi.com/mcp`): `whoami`, `get_envelope`
 (takes `envelope_id`, not `id`), `list_envelopes`, `list_events`,
 `list_webhooks`, `list_webhook_attempts`, `get_deliverables`, `list_emails`,
-`get_email`, `search_documentation`. Reads by id work on test and live
+`get_email`. Reads by id work on test and live
 envelopes alike. Listings take a per-call `mode` and default to test;
 `whoami.modes.live` indicates access, not a session mode. Call `whoami`
-only for an account question or a needed live-access check. Fall back to REST when a tool is missing. When you have to fall
+only for an account question or a needed live-access check. Fall back to REST when a tool is missing. For documented behavior, use
+`signatureapi-docs`. When you have to fall
 back, report the gap at https://github.com/signatureapi/skills/issues/new.
 
 Identifiers named below (paths, event types, status codes) are illustrations.
@@ -113,7 +117,7 @@ resend). Ask before applying it.
 
 ### 422 on create
 See `references/errors.md` for the response shape and the most common cause.
-Check the exact schema with `search_documentation` (MCP) or the OpenAPI spec at
+Check the exact schema in the OpenAPI spec at
 `https://spec.signatureapi.com/openapi.yaml`.
 
 ## References

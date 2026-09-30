@@ -18,6 +18,9 @@ code. The `signatureapi-integrate` skill builds from what the user approved.
   It builds from the approved brief or document.
 - **Diagnosing an integration that already exists** belongs to
   `signatureapi-diagnose`.
+- **Whether SignatureAPI supports something** is answered by
+  `signatureapi-docs`. Use it before you tell the user a capability exists
+  or does not.
 - **A different e-signature vendor** (DocuSign, Dropbox Sign, Adobe Sign, etc.)
   needs that vendor's own docs. Map the user's needs onto SignatureAPI's
   objects, not onto that vendor's.

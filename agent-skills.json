@@ -6,21 +6,28 @@
       "type": "skill-md",
       "description": "Use when someone wants to add e-signatures or SignatureAPI to an app and the signing flow is not decided yet. Decides who signs, how they prove it is them, and what happens after. Also for a signing product or \\\"a platform like DocuSign\\\", even when the user knows no SignatureAPI terms. Writes a design brief or document, no code. Needs no API key.",
       "url": "https://raw.githubusercontent.com/signatureapi/skills/main/skills/signatureapi-architecture/SKILL.md",
-      "digest": "sha256:b0524359b2f890a226be6fa2b1a2634876139f81a78c06a916f4c7f8291b6f4a"
+      "digest": "sha256:3dad41599b98836ca98831f97e4ccc6cb3831e40ba4beaafa0ad8249dc0b734a"
     },
     {
       "name": "signatureapi-diagnose",
       "type": "skill-md",
       "description": "Use when an existing SignatureAPI integration misbehaves. Covers an envelope stuck in processing, a missing webhook or signing email, an invalid or expired link, a missing signed document, or a 4xx error. Use it even for one missing email; test mode never sends real email. Read-only; safe on live envelopes.",
       "url": "https://raw.githubusercontent.com/signatureapi/skills/main/skills/signatureapi-diagnose/SKILL.md",
-      "digest": "sha256:6cb5c9dad09333904c6891eb3d5cf5f5d620480ea6f4e1b97ff1d86ec82acb50"
+      "digest": "sha256:8a463ce38c104737163afcf7c94f594d82a9af4409e818b4f0db71bb33f5aca5"
+    },
+    {
+      "name": "signatureapi-docs",
+      "type": "skill-md",
+      "description": "Use when a question about SignatureAPI needs a documented answer: how a feature works, what the API accepts, webhook behavior, signing flows, limits, or why something happened. Use it even when you think you know the answer, and even when the user knows no SignatureAPI terms. Not for other vendors' docs.",
+      "url": "https://raw.githubusercontent.com/signatureapi/skills/main/skills/signatureapi-docs/SKILL.md",
+      "digest": "sha256:496548244d4a0fda88cd768c23a0165470e6734c7d18f05ad7305c6ce3aecbc7"
     },
     {
       "name": "signatureapi-integrate",
       "type": "skill-md",
       "description": "Use when writing or changing code that calls SignatureAPI once the signing flow is agreed. Covers creating envelopes, placing signature fields, handling SignatureAPI webhooks, embedding signing, and sending one test envelope. Use it even for a single envelope, and in hosts without a repository. Works in test mode.",
       "url": "https://raw.githubusercontent.com/signatureapi/skills/main/skills/signatureapi-integrate/SKILL.md",
-      "digest": "sha256:a77a793d410419a0c9be451f6c1607008fff83d630fe5ae4eeb6d4198133c4e5"
+      "digest": "sha256:7cd5fd56d5acb594cafa1a16223998088f82e4d16e479c905373e7a1f705d24c"
     }
   ]
 }

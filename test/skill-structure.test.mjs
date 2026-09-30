@@ -77,12 +77,68 @@ test("signatureapi-integrate starts from the design: the gate precedes Orient an
 test("every file under each skill's references/ is listed in that skill's References list", async () => {
   const dirents = await readdir(SKILLS, { withFileTypes: true });
   const skills = dirents.filter((d) => d.isDirectory()).map((d) => d.name);
-  assert.deepEqual(skills.sort(), ["signatureapi-architecture", "signatureapi-diagnose", "signatureapi-integrate"]);
+  assert.deepEqual(skills.sort(), ["signatureapi-architecture", "signatureapi-diagnose", "signatureapi-docs", "signatureapi-integrate"]);
   for (const skill of skills) {
     const text = await readFile(new URL(`${skill}/SKILL.md`, SKILLS), "utf8");
     const referencesSection = text.slice(headingIndex(text, /^## References/m));
     const files = await readdir(new URL(`${skill}/references/`, SKILLS)).catch(() => []);
     const missing = files.filter((f) => f.endsWith(".md")).filter((f) => !referencesSection.includes(`\`references/${f}\``));
     assert.deepEqual(missing, [], `${skill}: add these to the References list in SKILL.md: ${missing.join(", ")}`);
+  }
+});
+
+test("signatureapi-docs navigates the live docs index and never answers from memory", async () => {
+  const text = await readFile(new URL("signatureapi-docs/SKILL.md", SKILLS), "utf8");
+  const frontmatter = text.match(/^---\n([\s\S]*?)\n---/)[1];
+  assert.match(frontmatter, /^name: signatureapi-docs$/m);
+  assert.doesNotMatch(frontmatter, /^inputs:/m, "the docs skill must not require an API key");
+  assert.match(frontmatter, /^allowed-tools: WebFetch\(domain:signatureapi\.com\)$/m);
+  assert.match(frontmatter, /even when you think you know the answer/);
+
+  const order = [
+    /^## Purpose/m,
+    /^## When to reach for something else/m,
+    /^## Keep the user's vocabulary/m,
+    /^## Sources, in order/m,
+    /^## Find the pages/m,
+    /^## Answer/m,
+    /^## Vocabulary/m,
+  ];
+  const positions = order.map((p) => headingIndex(text, p));
+  positions.forEach((pos, i) => assert.ok(pos >= 0, `missing heading ${order[i]}`));
+  for (let i = 1; i < positions.length; i++) assert.ok(positions[i - 1] < positions[i], `heading ${order[i]} is out of order`);
+
+  const reachFor = text.slice(positions[1], positions[2]);
+  assert.match(reachFor, /openapi-explore\.mjs/, "field-level questions go to the OpenAPI spec");
+
+  assert.ok(text.includes("https://signatureapi.com/llms.txt"));
+  assert.ok(
+    text.indexOf("llms.txt") < text.indexOf("search_documentation"),
+    "the index comes before the keyword search",
+  );
+  assert.match(text, /Memory is not a source/);
+  assert.match(text, /Choose by meaning/);
+  assert.match(text, /Stop after three rounds/);
+  assert.match(text, /unverified/);
+  assert.doesNotMatch(text, /llms-full\.txt/, "the skill never downloads the full corpus");
+  assert.match(text, /verbatim/, "a summarizing fetch tool must be asked for the full text");
+  assert.match(text, /`curl -s/, "with a shell, fetch the raw page Markdown");
+  assert.match(text, /returns that page in full/, "hosts without URL fetch read whole pages through search_documentation");
+  assert.match(text, /`curl -s -o/, "save the raw page to a file so shell output limits cannot cut it");
+  assert.match(text, /Do not search it for\s+keywords/, "a saved page is read, not grepped");
+  assert.match(text, /temporary directory/, "saved pages never land in the user's project");
+  assert.doesNotMatch(text, /node \.\.\/signatureapi-integrate/, "a relative script path breaks outside the skill directory");
+});
+
+test("the other skills hand docs research to signatureapi-docs instead of repeating it", async () => {
+  for (const skill of ["signatureapi-architecture", "signatureapi-diagnose", "signatureapi-integrate"]) {
+    const text = await readFile(new URL(`${skill}/SKILL.md`, SKILLS), "utf8");
+    const start = headingIndex(text, /^## When to reach for something else/m);
+    assert.ok(start >= 0, `${skill}: missing "When to reach for something else"`);
+    const rest = text.slice(start + 1);
+    const section = rest.slice(0, rest.search(/^## /m));
+    assert.match(section, /`signatureapi-docs`/, `${skill}: name signatureapi-docs under "When to reach for something else"`);
+    assert.doesNotMatch(text, /`search_documentation` \(MCP\)/, `${skill}: send prose lookups to signatureapi-docs`);
+    assert.doesNotMatch(text, /Markdown twin/, `${skill}: page Markdown is the docs skill's job`);
   }
 });

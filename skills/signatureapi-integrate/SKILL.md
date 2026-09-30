@@ -14,6 +14,8 @@ inputs:
   `signatureapi-architecture`.
 - **An integration that already misbehaves** belongs to
   `signatureapi-diagnose`.
+- **How a SignatureAPI feature behaves**, in prose, belongs to
+  `signatureapi-docs`. Use it before you answer from memory.
 - **Another vendor's webhooks or API** (DocuSign, Dropbox Sign, Adobe Sign)
   need that vendor's docs. Do not carry their concepts into SignatureAPI.
 - **No SignatureAPI account yet.** Ask whether the user has chosen
@@ -47,8 +49,8 @@ mode only. Test keys start with `key_test_`.
     connected or a requested live action needs an access check.
   - Webhooks: `list_webhooks`, `create_webhook`, `update_webhook`,
     `list_webhook_attempts`, `delete_webhook`.
-  - Docs: `search_documentation` (a `page` argument returns one docs page
-    in full).
+  - Docs: `search_documentation`. Reach it through `signatureapi-docs`,
+    which decides when a keyword search helps.
 - **The CLI** (`npx --yes signatureapi <command>`) handles secrets and
   local ports when you have a shell. `init` writes the test key to the
   env file. `listen` tunnels test webhooks to a local handler and writes
@@ -100,8 +102,7 @@ a handler; the docs pages are too large for this.
     node scripts/openapi-explore.mjs check-request get '/envelopes/<id>/deliverables?limit=20'
 
 `check-request` validates a request locally and sends nothing. For prose,
-use `search_documentation` (MCP) or any docs page's Markdown twin at
-`https://signatureapi.com/<slug>.md`.
+use `signatureapi-docs`.
 
 ## Setup
 
