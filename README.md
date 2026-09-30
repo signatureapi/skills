@@ -1,10 +1,11 @@
 # SignatureAPI Agent Skills
 
 [SignatureAPI](https://signatureapi.com) is an e-signature API for developers: send documents for
-signature, embed signing in your app, and track progress with webhooks. These are its Agent Skills. Three skills let
+signature, embed signing in your app, and track progress with webhooks. These are its Agent Skills. Four skills let
 AI coding agents design, build and troubleshoot e-signature integrations from the command line:
 one decides how an app should use SignatureAPI and writes the design, one builds the signing
-flow from that design, one diagnoses a flow that already exists.
+flow from that design, one diagnoses a flow that already exists, and one answers questions from
+the current docs.
 
 ## Install
 
@@ -112,8 +113,9 @@ Claude Code, Codex and Cursor each read their own file under `hooks/`. All of th
   use SignatureAPI, and write the design document (`docs/signatureapi-integration.md`) the
   integrate skill builds from. Needs no API key.
 - **[signatureapi-integrate](skills/signatureapi-integrate)** — build or change an integration
-  from an approved design: create an envelope, place signature fields, wire up webhooks, and
-  verify the flow end to end against a real test-mode envelope.
+  from an approved design: create an envelope, place signature fields, wire up webhooks, embed
+  signing in a web or native mobile app, and verify the flow end to end against a real
+  test-mode envelope.
 - **[signatureapi-diagnose](skills/signatureapi-diagnose)** — diagnose an integration that
   misbehaves: an envelope stuck in processing, a webhook that never arrived, a recipient who
   never got the signing email, a missing deliverable, or a validation error on create.
