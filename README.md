@@ -178,6 +178,15 @@ carries the new version. Claude Code keeps existing installs on the cached versi
 number changes. Do not publish GitHub Releases: once one exists, Gemini CLI installs follow
 release tags instead of the default branch.
 
+For OpenAI directory submissions, `interface.shortDescription` is the subtitle and must
+fit within 30 characters; `interface.longDescription` allows up to 4,000 characters.
+Keep the subtitle concise and put detailed functionality in the long description.
+Set `interface.supportURL` explicitly: `homepage` and `author.url` do not populate it.
+Use the plugin-specific privacy notice for `interface.privacyPolicyURL`.
+These values come from `generate-manifests.mjs`; regenerate the manifests after changing them.
+Check the current [submission requirements](https://developers.openai.com/plugins/deploy/submission-errors)
+before uploading: local package validation is less strict than final directory submission.
+
 When a rewrite makes `test/spec-drift.test.mjs` report an unused allowlist entry, check whether the
 rewrite dropped that content before deleting the entry. Compare the backticked identifiers of the old
 and new skill (and its references); restore anything lost unintentionally.

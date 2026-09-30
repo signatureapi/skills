@@ -1,9 +1,10 @@
 {
   "name": "signatureapi",
-  "version": "1.3.0",
+  "version": "1.3.1",
   "description": "SignatureAPI is an e-signature API for developers: send documents for signature, embed signing in your app, and track progress with webhooks. This plugin adds skills to design, build and troubleshoot your integration and answer questions from the docs, plus the hosted MCP server.",
   "author": {
     "name": "SignatureAPI",
+    "email": "support@signatureapi.com",
     "url": "https://signatureapi.com"
   },
   "homepage": "https://signatureapi.com",
@@ -24,7 +25,7 @@
   "hooks": "./hooks/codex-hooks.json",
   "interface": {
     "displayName": "SignatureAPI",
-    "shortDescription": "E-signature API for developers. Design, build and troubleshoot signing flows.",
+    "shortDescription": "E-signatures for developers",
     "longDescription": "SignatureAPI is an e-signature API for developers: send documents for signature, embed signing in your app, and track progress with webhooks. Four skills design the signing flow, build and test the integration, diagnose one that misbehaves, and answer questions from the current docs. Test mode sends no real email. The hosted MCP server, signed in with OAuth, lets the agent create and inspect envelopes directly.",
     "developerName": "SignatureAPI",
     "category": "Developer Tools",
@@ -34,7 +35,8 @@
       "Write"
     ],
     "websiteURL": "https://signatureapi.com",
-    "privacyPolicyURL": "https://signatureapi.com/dpa",
+    "supportURL": "https://signatureapi.com/support",
+    "privacyPolicyURL": "https://signatureapi.com/docs/legal/terms/openai-plugin-privacy",
     "termsOfServiceURL": "https://signatureapi.com/terms",
     "defaultPrompt": [
       "Add e-signatures to this app with SignatureAPI.",

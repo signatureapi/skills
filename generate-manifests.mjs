@@ -44,7 +44,7 @@ const PRODUCT =
   "SignatureAPI is an e-signature API for developers: send documents for signature, embed signing in your app, and track progress with webhooks.";
 const DESCRIPTION = `${PRODUCT} This plugin adds skills to design, build and troubleshoot your integration and answer questions from the docs, plus the hosted MCP server.`;
 // Codex shows these in its plugin browser in place of `description`.
-const SHORT_DESCRIPTION = "E-signature API for developers. Design, build and troubleshoot signing flows.";
+const SHORT_DESCRIPTION = "E-signatures for developers";
 const LONG_DESCRIPTION = `${PRODUCT} Four skills design the signing flow, build and test the integration, diagnose one that misbehaves, and answer questions from the current docs. Test mode sends no real email. The hosted MCP server, signed in with OAuth, lets the agent create and inspect envelopes directly.`;
 const DEFAULT_PROMPTS = [
   "Add e-signatures to this app with SignatureAPI.",
@@ -56,9 +56,10 @@ const BRAND_COLOR = "#2563EB";
 // directory reads `icon` (an SVG or a 512x512 PNG inside the plugin), Codex
 // reads `interface.logo` and `interface.composerIcon`, Cursor reads `logo`.
 export const ICON_PATH = "./assets/icon.svg";
-const AUTHOR = { name: "SignatureAPI", url: "https://signatureapi.com" };
+const AUTHOR = { name: "SignatureAPI", email: "support@signatureapi.com", url: "https://signatureapi.com" };
 const HOMEPAGE = "https://signatureapi.com";
 const PRIVACY_POLICY_URL = "https://signatureapi.com/dpa";
+const OPENAI_PRIVACY_POLICY_URL = "https://signatureapi.com/docs/legal/terms/openai-plugin-privacy";
 const REPOSITORY = "https://github.com/signatureapi/skills";
 const DOCUMENTATION_URL = "https://signatureapi.com/docs";
 const SUPPORT_URL = "https://signatureapi.com/support";
@@ -240,7 +241,8 @@ export function buildCodexPluginJson(skills, version) {
       category: "Developer Tools",
       capabilities: ["Interactive", "Read", "Write"],
       websiteURL: HOMEPAGE,
-      privacyPolicyURL: PRIVACY_POLICY_URL,
+      supportURL: SUPPORT_URL,
+      privacyPolicyURL: OPENAI_PRIVACY_POLICY_URL,
       termsOfServiceURL: TERMS_URL,
       defaultPrompt: DEFAULT_PROMPTS,
       brandColor: BRAND_COLOR,

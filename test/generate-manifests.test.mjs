@@ -60,6 +60,17 @@ test("agent-skills.json parses and matches the generator's current output", asyn
 // The manifests this generator owns must never drift from skills/*/SKILL.md
 // frontmatter — editing a skill's description without running
 // `npm run manifests` should break this test, not ship a stale manifest.
+test("Codex listing meets public-directory subtitle and contact requirements", async () => {
+  const files = await generate();
+  const { interface: listing, author } = JSON.parse(files[".codex-plugin/plugin.json"]);
+  assert.equal(author.email, "support@signatureapi.com");
+  assert.ok(listing.shortDescription.trim().length > 0);
+  assert.ok([...listing.shortDescription].length <= 30, "directory subtitles have a 30-character limit");
+  assert.ok([...listing.longDescription].length <= 4000, "directory descriptions have a 4000-character limit");
+  assert.equal(listing.supportURL, "https://signatureapi.com/support");
+  assert.equal(listing.privacyPolicyURL, "https://signatureapi.com/docs/legal/terms/openai-plugin-privacy");
+});
+
 test("generated manifests have no diff against the committed files", async () => {
   const files = await generate();
   for (const [path, expected] of Object.entries(files)) {
