@@ -40,8 +40,22 @@ const BRANCH = "main";
 // file directly, `npm test` will just flag the drift.
 export const MCP_URL = "https://mcp.signatureapi.com/mcp";
 const SERVER_NAME = "signatureapi";
-const DESCRIPTION =
-  "SignatureAPI e-signature skills, kept in sync with the hosted MCP server configuration so the same install delivers both.";
+const PRODUCT =
+  "SignatureAPI is an e-signature API for developers: send documents for signature, embed signing in your app, and track progress with webhooks.";
+const DESCRIPTION = `${PRODUCT} This plugin adds skills to design, build and troubleshoot your integration, plus the hosted MCP server.`;
+// Codex shows these in its plugin browser in place of `description`.
+const SHORT_DESCRIPTION = "E-signature API for developers. Design, build and troubleshoot signing flows.";
+const LONG_DESCRIPTION = `${PRODUCT} Three skills design the signing flow, build and test the integration, and diagnose one that misbehaves. Test mode sends no real email. The hosted MCP server, signed in with OAuth, lets the agent create and inspect envelopes directly.`;
+const DEFAULT_PROMPTS = [
+  "Add e-signatures to this app with SignatureAPI.",
+  "Send a test envelope and show me the signing link.",
+  "Why is my envelope stuck in processing?",
+];
+const BRAND_COLOR = "#2563EB";
+// The listing icon, one square SVG for every host that shows one. Claude's
+// directory reads `icon` (an SVG or a 512x512 PNG inside the plugin), Codex
+// reads `interface.logo` and `interface.composerIcon`, Cursor reads `logo`.
+export const ICON_PATH = "./assets/icon.svg";
 const AUTHOR = { name: "SignatureAPI", url: "https://signatureapi.com" };
 const HOMEPAGE = "https://signatureapi.com";
 const PRIVACY_POLICY_URL = "https://signatureapi.com/dpa";
@@ -104,6 +118,7 @@ export function buildPluginJson(skills, version) {
     displayName: "SignatureAPI",
     version,
     description: DESCRIPTION,
+    icon: ICON_PATH,
     author: AUTHOR,
     homepage: HOMEPAGE,
     repository: REPOSITORY,
@@ -161,6 +176,7 @@ export function buildCursorPluginJson(skills, version) {
     homepage: HOMEPAGE,
     license: "MIT",
     keywords: KEYWORDS,
+    logo: ICON_PATH,
     mcpServers: buildMcpJson().mcpServers,
     hooks: CURSOR_HOOKS_PATH,
   };
@@ -216,6 +232,22 @@ export function buildCodexPluginJson(skills, version) {
     skills: "./skills/",
     mcpServers: "./.codex-plugin/mcp-servers.json",
     hooks: CODEX_HOOKS_PATH,
+    interface: {
+      displayName: "SignatureAPI",
+      shortDescription: SHORT_DESCRIPTION,
+      longDescription: LONG_DESCRIPTION,
+      developerName: AUTHOR.name,
+      category: "Developer Tools",
+      capabilities: ["Interactive", "Read", "Write"],
+      websiteURL: HOMEPAGE,
+      privacyPolicyURL: PRIVACY_POLICY_URL,
+      termsOfServiceURL: TERMS_URL,
+      defaultPrompt: DEFAULT_PROMPTS,
+      brandColor: BRAND_COLOR,
+      composerIcon: ICON_PATH,
+      logo: ICON_PATH,
+      screenshots: [],
+    },
   };
 }
 

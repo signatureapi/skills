@@ -1,6 +1,7 @@
 # SignatureAPI Agent Skills
 
-Agent Skills for [SignatureAPI](https://signatureapi.com), the e-signature API. Three skills let
+[SignatureAPI](https://signatureapi.com) is an e-signature API for developers: send documents for
+signature, embed signing in your app, and track progress with webhooks. These are its Agent Skills. Three skills let
 AI coding agents design, build and troubleshoot e-signature integrations from the command line:
 one decides how an app should use SignatureAPI and writes the design, one builds the signing
 flow from that design, one diagnoses a flow that already exists.

@@ -14,6 +14,7 @@ import {
   CLAUDE_HOOKS_PATH,
   CODEX_HOOKS_PATH,
   CURSOR_HOOKS_PATH,
+  ICON_PATH,
 } from "../generate-manifests.mjs";
 
 const execFileAsync = promisify(execFile);
@@ -107,6 +108,25 @@ test("Claude Code, Codex and Cursor manifests name their own generated hook file
     assert.ok(hooksPath.startsWith("./"), `${hooksPath} must be ./-relative to the plugin root`);
     assert.ok(files[hooksPath.slice(2)], `${hooksPath} is not generated`);
   }
+});
+
+// No host validates the icon path: `claude plugin validate` accepts any
+// value, so a missing or renamed file would ship a listing with no icon.
+test("every manifest that names an icon points at the shipped SVG", async () => {
+  const files = await generate();
+  const icons = [
+    [".claude-plugin/plugin.json", (json) => [json.icon]],
+    [".codex-plugin/plugin.json", (json) => [json.interface.logo, json.interface.composerIcon]],
+    [".cursor-plugin/plugin.json", (json) => [json.logo]],
+  ];
+  for (const [manifest, pick] of icons) {
+    for (const path of pick(JSON.parse(files[manifest]))) {
+      assert.equal(path, ICON_PATH, `${manifest} does not name ${ICON_PATH}`);
+    }
+  }
+  assert.ok(ICON_PATH.startsWith("./"), `${ICON_PATH} must be ./-relative to the plugin root`);
+  const svg = await readFile(ICON_PATH.slice(2), "utf8");
+  assert.match(svg, /^<svg[^>]*viewBox="0 0 512 512"/, "the icon must be a square 512 SVG");
 });
 
 test("hosts without working plugin hooks get no hook wiring", async () => {
