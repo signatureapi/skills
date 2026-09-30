@@ -17,13 +17,64 @@
 // click when it couldn't read a label; a swallowed selector error that
 // skipped a whole step while `noteFallbackIfUsed` still reported the
 // contract satisfied). None of that is allowed here anymore.
+//
+// --embedded <redirect|message> walks the ceremony the way an app embeds it
+// and also proves the terminal event reached the embedding page. The same
+// rule holds there. An event is counted only when it was captured from the
+// delivery mechanism itself: the Navigation API `navigate` event for a
+// `signatureapi-message:` URL (redirect), or a postMessage that passed the
+// origin AND source check on the host page (message). Console output is
+// never read: a log line proves nothing was delivered. Exactly one event,
+// `ceremony.completed`, must arrive; none, several, or any other type
+// fails, and the API poll still runs after that as the source of truth.
+// The embedded guards, each failing closed:
+//   - every flag is read in both `--name value` and `--name=value` form, and
+//     a flag with no value is an error, never "not given" (INVALID_FLAG_VALUE,
+//     INVALID_EMBEDDED_MODE);
+//   - message mode needs a usable `embeddable_in` origin to host the page on
+//     (EMBED_ORIGIN_MISSING); the route for that origin serves only the host
+//     page and aborts every other request, so no real host is contacted;
+//   - the frame counts as loaded only when it has the ceremony's origin and a
+//     known signer UI element; a frame the ceremony's CSP refused fails with
+//     EMBED_FRAME_BLOCKED, naming the origin embeddable_in must list;
+//   - a required step that never appears, after an event already arrived,
+//     reports that event (a ceremony.failed names its error_type) instead of
+//     CEREMONY_WALK_STEP_NOT_FOUND;
+//   - the "Confirm to continue" dialog is never confirmed in an embedded walk
+//     (ORGANIC_INPUT_NOT_ARMED): the app's signer produces real pointer input;
+//   - any error not turned into a named refusal leaves as CEREMONY_WALK_ERROR,
+//     through the same JSON fail output.
 import { ok, fail, apiBase, requireTestKey } from "./lib/output.mjs";
 
 const API = apiBase();
 
+/**
+ * Reads `--name value` or `--name=value` from argv. Both spellings count, so
+ * an equals-form flag is never silently ignored (an ignored `--embedded=message`
+ * once ran a plain walk and reported ok). `present` is true whenever the flag
+ * appears; `value` is undefined when it has none (last argument, or followed
+ * by another flag), and "" for `--name=`. Callers treat a present flag with no
+ * usable value as an error, not as absent.
+ */
+export function readFlag(argv, name) {
+  const bare = `--${name}`;
+  const prefix = `${bare}=`;
+  for (let i = 0; i < argv.length; i++) {
+    const token = argv[i];
+    if (token === bare) {
+      const next = argv[i + 1];
+      return { present: true, value: next === undefined || next.startsWith("--") ? undefined : next };
+    }
+    if (typeof token === "string" && token.startsWith(prefix)) {
+      return { present: true, value: token.slice(prefix.length) };
+    }
+  }
+  return { present: false, value: undefined };
+}
+
 function arg(name, fallback) {
-  const i = process.argv.indexOf(`--${name}`);
-  return i === -1 ? fallback : process.argv[i + 1];
+  const flag = readFlag(process.argv, name);
+  return flag.present ? flag.value : fallback;
 }
 
 /**
@@ -196,7 +247,339 @@ export async function pollForRecipientCompletion({ api, envelopeId, recipientKey
   return { completed: false, envelope: lastEnvelope, recipient: null };
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+export const EMBEDDED_MODES = ["redirect", "message"];
+export const REDIRECT_EVENT_PREFIX = "signatureapi-message:";
+/** The id of the iframe on the host page that message mode serves. */
+export const HOST_PAGE_FRAME_ID = "ceremony";
+
+/** The ceremony URL an app loads: `embedded=true` plus the event delivery mode. */
+export function embeddedCeremonyUrl(ceremonyUrl, delivery) {
+  if (!EMBEDDED_MODES.includes(delivery)) {
+    throw new Error(`Unknown event delivery "${delivery}"; expected one of ${EMBEDDED_MODES.join(", ")}`);
+  }
+  const url = new URL(ceremonyUrl);
+  url.searchParams.set("embedded", "true");
+  url.searchParams.set("event_delivery", delivery);
+  return url.toString();
+}
+
+/** Keeps only the fields a ceremony event carries. Anything without a string `type` is not an event. */
+function pickEventFields(fields) {
+  const event = { type: typeof fields?.type === "string" && fields.type ? fields.type : null };
+  for (const name of ["error_type", "error_message"]) {
+    if (typeof fields?.[name] === "string") event[name] = fields[name];
+  }
+  return event;
+}
+
+/**
+ * Parses the URL the ceremony navigates to with event_delivery=redirect:
+ * `signatureapi-message://<type>/?error_type=…&error_message=…`. The event
+ * type is the URL host; the fields are form-encoded query parameters (`+` is
+ * a space). Returns null for anything that is not such a URL, so a caller
+ * never mistakes an ordinary navigation for an event.
+ */
+export function parseRedirectEvent(url) {
+  let parsed;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return null;
+  }
+  if (parsed.protocol !== REDIRECT_EVENT_PREFIX || !parsed.host) return null;
+  return pickEventFields({ ...Object.fromEntries(parsed.searchParams), type: parsed.host });
+}
+
+/** The event carried by a postMessage payload that passed the host page's origin and source check. */
+export function parseMessageEvent(data) {
+  if (!data || typeof data !== "object" || Array.isArray(data)) return { type: null };
+  return pickEventFields(data);
+}
+
+const LOOPBACK_HOSTS = ["localhost", "127.0.0.1", "[::1]"];
+
+/**
+ * The origin the message-mode host page is served from: the first usable
+ * `embeddable_in` entry. Each entry is parsed with `new URL()` (a missing
+ * scheme means https; the path is ignored), so a bracketed IPv6 host such as
+ * `[::1]` parses like any other. Rules, in order:
+ *
+ *   - a wildcard entry is skipped: it names many origins, not one to serve;
+ *   - an https entry is used as is;
+ *   - an http loopback entry is used as is;
+ *   - any other http entry is upgraded to https on the same host and port,
+ *     because a CSP3 host-source `http://x` also matches `https://x`.
+ *
+ * Returns null when no entry fits.
+ */
+export function pickEmbedOrigin(embeddableIn) {
+  if (!Array.isArray(embeddableIn)) return null;
+  for (const entry of embeddableIn) {
+    if (typeof entry !== "string") continue;
+    const trimmed = entry.trim();
+    if (!trimmed || trimmed.includes("*")) continue;
+    let url;
+    try {
+      url = new URL(/^[a-z][a-z0-9+.-]*:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`);
+    } catch {
+      continue;
+    }
+    if (!url.hostname) continue;
+    if (url.protocol === "https:") return url.origin;
+    if (url.protocol !== "http:") continue;
+    if (LOOPBACK_HOSTS.includes(url.hostname)) return url.origin;
+    return new URL(`https://${url.host}`).origin;
+  }
+  return null;
+}
+
+/** Resolves where message mode serves its host page, or the refusal when it cannot. */
+export function embedOriginFor(recipient) {
+  if (!recipient) {
+    return {
+      ok: false,
+      code: "RECIPIENT_KEY_UNRESOLVED",
+      message: "Could not determine which recipient's ceremony this is, so its embeddable_in origins cannot be read. Message mode needs them to host the page the ceremony is framed in.",
+      next: ["Pass --recipient <key> explicitly"],
+    };
+  }
+  const origin = pickEmbedOrigin(recipient?.ceremony?.embeddable_in);
+  if (!origin) {
+    return {
+      ok: false,
+      code: "EMBED_ORIGIN_MISSING",
+      message: `Recipient "${recipient.key}" has no embeddable_in entry naming one https origin (or an http loopback origin). The ceremony refuses to load in a frame whose origin is not listed, so message mode has no page to host it on.`,
+      next: [
+        "Create the ceremony with embeddable_in listing the origin of the page that frames it, for example https://app.example.invalid",
+        "Or run --embedded redirect, which loads the ceremony top-level and needs no embeddable_in",
+      ],
+    };
+  }
+  return { ok: true, origin };
+}
+
+const escapeHtmlAttribute = (value) => value.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
+
+/**
+ * The page message mode serves at the embed origin. It frames the ceremony
+ * and forwards a message only when it comes from the ceremony's origin AND
+ * from this iframe's window; every other message is forwarded as rejected so
+ * the check is visible in the output. `bridge` is the binding name exposed
+ * by the walker.
+ */
+export function renderHostPage(ceremonySrc, bridge) {
+  const ceremonyOrigin = new URL(ceremonySrc).origin;
+  return `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Signing ceremony</title>
+<style>html, body { margin: 0; height: 100%; } iframe { display: block; width: 100%; height: 100%; border: 0; }</style>
+</head>
+<body>
+<iframe id="${HOST_PAGE_FRAME_ID}" title="Signing ceremony" src="${escapeHtmlAttribute(ceremonySrc)}"></iframe>
+<script>
+  (function () {
+    var CEREMONY_ORIGIN = ${JSON.stringify(ceremonyOrigin)};
+    var frame = document.getElementById(${JSON.stringify(HOST_PAGE_FRAME_ID)});
+    window.addEventListener("message", function (event) {
+      var accepted = event.origin === CEREMONY_ORIGIN && event.source === frame.contentWindow;
+      window[${JSON.stringify(bridge)}](JSON.stringify(
+        accepted ? { kind: "event", data: event.data } : { kind: "rejected", origin: event.origin }
+      ));
+    });
+  })();
+</script>
+</body>
+</html>
+`;
+}
+
+/**
+ * Redirect mode: opens the ceremony top-level and records every navigation
+ * to a `signatureapi-message:` URL, through the Navigation API `navigate`
+ * event (the moment a WebView's navigation handler sees it). The binding
+ * accepts calls from the main frame only. Returns whether the page has the
+ * Navigation API at all; without it nothing could be recorded.
+ */
+export async function openWithRedirectCapture(page, ceremonySrc, deliveredEvents) {
+  await page.exposeBinding("__signatureapiNavigation", (source, destination) => {
+    if (source.frame !== page.mainFrame()) return;
+    const event = parseRedirectEvent(destination);
+    if (event) deliveredEvents.push({ ...event, via: "redirect" });
+  });
+  await page.addInitScript((prefix) => {
+    if (window.top !== window) return;
+    window.__signatureapiNavigationApi = typeof window.navigation?.addEventListener === "function";
+    window.navigation?.addEventListener("navigate", (event) => {
+      const destination = event.destination?.url ?? "";
+      if (destination.startsWith(prefix)) window.__signatureapiNavigation(destination);
+    });
+  }, REDIRECT_EVENT_PREFIX);
+  await page.goto(ceremonySrc, { waitUntil: "networkidle" });
+  return page.evaluate(() => window.__signatureapiNavigationApi === true).catch(() => false);
+}
+
+/** Elements only the signer UI renders: the step contract, or its older private ids. */
+export const CEREMONY_ELEMENT_SELECTOR =
+  '[data-ceremony-step], #concent-modal, #primary-button, #primary-button-inline, button[aria-label="Sign here"]';
+
+/**
+ * Message mode: serves renderHostPage at `embedOrigin` and records what it
+ * forwards. The route matches by exact origin and fails closed: only the
+ * main-frame navigation to `${embedOrigin}/` gets the host page, and every
+ * other request to that origin is aborted, so nothing ever reaches a real
+ * host there. The binding accepts calls from the main frame (the host page)
+ * only.
+ *
+ * The frame counts as loaded only when its document has the ceremony's
+ * origin AND shows a known ceremony element. A frame the ceremony's CSP
+ * refuses still has a body (Chromium's error page), so "a body exists" is
+ * not evidence. Never throws: returns `{ ok: true, frame }` or a
+ * `{ ok: false, code, message, next }` refusal for the fail contract.
+ */
+export async function openInHostPage(page, { embedOrigin, ceremonySrc, deliveredEvents, rejectedOrigins, frameTimeoutMs = 20000 }) {
+  const bridge = "__signatureapiEmbedBridge";
+  const hostUrl = `${embedOrigin}/`;
+  const ceremonyOrigin = new URL(ceremonySrc).origin;
+  try {
+    await page.exposeBinding(bridge, (source, raw) => {
+      if (source.frame !== page.mainFrame()) return;
+      let parsed;
+      try {
+        parsed = JSON.parse(raw);
+      } catch {
+        return;
+      }
+      if (parsed?.kind === "event") deliveredEvents.push({ ...parseMessageEvent(parsed.data), via: "message" });
+      else rejectedOrigins.push(String(parsed?.origin ?? ""));
+    });
+    const hostPage = renderHostPage(ceremonySrc, bridge);
+    await page.route(
+      (url) => url.origin === embedOrigin,
+      (route) => {
+        const request = route.request();
+        let mainFrame = false;
+        try {
+          mainFrame = request.frame() === page.mainFrame();
+        } catch {
+          mainFrame = false;
+        }
+        if (request.url() === hostUrl && request.isNavigationRequest() && mainFrame) {
+          return route.fulfill({ contentType: "text/html; charset=utf-8", body: hostPage });
+        }
+        return route.abort("blockedbyclient");
+      },
+    );
+    await page.goto(hostUrl, { waitUntil: "load", timeout: 30000 });
+  } catch (e) {
+    return {
+      ok: false,
+      code: "EMBED_HOST_PAGE_FAILED",
+      message: `Could not serve the host page at ${hostUrl}: ${e?.message ?? e}`,
+      next: ["Re-run with PWDEBUG=1 to watch the browser", "Or run --embedded redirect, which needs no host page"],
+    };
+  }
+
+  const deadline = Date.now() + frameTimeoutMs;
+  let originMatched = false;
+  let lastFrameUrl = null;
+  while (Date.now() < deadline && deliveredEvents.length === 0) {
+    const frame = await page
+      .$(`#${HOST_PAGE_FRAME_ID}`)
+      .then((handle) => handle?.contentFrame() ?? null)
+      .catch(() => null);
+    lastFrameUrl = frame ? frame.url() : null;
+    if (frame && originOf(lastFrameUrl) === ceremonyOrigin) {
+      originMatched = true;
+      const count = await frame.locator(CEREMONY_ELEMENT_SELECTOR).count().catch(() => 0);
+      if (count > 0) return { ok: true, frame: page.frameLocator(`#${HOST_PAGE_FRAME_ID}`) };
+    }
+    await page.waitForTimeout(250);
+  }
+
+  if (!originMatched && deliveredEvents.length === 0) {
+    return {
+      ok: false,
+      code: "EMBED_FRAME_BLOCKED",
+      message: `The ceremony never loaded in the frame on the host page at ${embedOrigin} (the frame shows ${JSON.stringify(lastFrameUrl)}, not ${ceremonyOrigin}). The ceremony refuses to be framed by an origin that is not in the recipient's embeddable_in, so ${embedOrigin} must be listed there.`,
+      next: [
+        `Create the ceremony with embeddable_in listing ${embedOrigin}`,
+        "Or run --embedded redirect, which loads the ceremony top-level and needs no embeddable_in",
+      ],
+    };
+  }
+  return stepNotFoundOutcome({
+    events: deliveredEvents,
+    via: "message",
+    step: "loading the ceremony in the host page frame",
+    name: "a signer UI element",
+  });
+}
+
+/**
+ * The refusal for a required step that never appeared. When the page has
+ * already received a ceremony event, that event is the real cause (a revoked
+ * or completed link sends ceremony.failed at load), so its classification is
+ * returned instead: it names the error_type.
+ */
+export function stepNotFoundOutcome({ events, via, step, name, visibleButtons = [] }) {
+  if (Array.isArray(events) && events.length > 0) {
+    const delivered = classifyDeliveredEvents(events, { expected: "ceremony.completed", via });
+    if (!delivered.ok) return delivered;
+  }
+  return {
+    ok: false,
+    code: "CEREMONY_WALK_STEP_NOT_FOUND",
+    message: `Could not find "${name}" while ${step}.`,
+    next: [
+      `Buttons visible on the page at that point: ${JSON.stringify(visibleButtons.filter(Boolean))}`,
+      "Re-run with PWDEBUG=1 to watch the browser",
+      "The ceremony UI may differ from the sequence this script expects (place types/auth can vary) — inspect and update the selectors",
+    ],
+  };
+}
+
+/**
+ * Decides whether the walk delivered exactly the expected terminal event
+ * through the expected mechanism. No event, more than one, an unreadable
+ * one, the wrong type, or the wrong delivery path each fail: a ceremony
+ * sends one terminal event, and anything else means the embedding would not
+ * have seen what the walk claims.
+ */
+export function classifyDeliveredEvents(events, { expected = "ceremony.completed", via } = {}) {
+  const list = Array.isArray(events) ? events : [];
+  const summary = JSON.stringify(list.map((e) => ({ type: e?.type ?? null, via: e?.via ?? null, ...(e?.error_type ? { error_type: e.error_type } : {}) })));
+  if (list.length === 0) {
+    return {
+      ok: false,
+      code: "CEREMONY_EVENT_NOT_DELIVERED",
+      message: `The walk finished but no ceremony event reached the embedding page (expected ${expected}${via ? ` via ${via}` : ""}).`,
+      next: [
+        "Re-run with PWDEBUG=1 to watch the browser",
+        "Check that the ceremony URL carries embedded=true and the event delivery mode",
+      ],
+    };
+  }
+  const [event] = list;
+  const wrongPath = via && list.some((e) => e?.via !== via);
+  if (list.length > 1 || event?.type !== expected || wrongPath) {
+    const failed = event?.type === "ceremony.failed" && event.error_type ? ` The ceremony reported error_type ${event.error_type}.` : "";
+    return {
+      ok: false,
+      code: "CEREMONY_EVENT_UNEXPECTED",
+      message: `Expected exactly one ${expected} event${via ? ` via ${via}` : ""}; the embedding page received ${summary}.${failed}`,
+      next: [
+        "Branch on error_type for a ceremony.failed event: an expired, replaced or completed link reports it",
+        "Fetch a fresh ceremony URL from the envelope and walk it again",
+      ],
+    };
+  }
+  return { ok: true, event: { type: event.type, via: event.via } };
+}
+
+async function main() {
   // No flag gates this run. An agent invokes this script non-interactively,
   // so any condition a flag could check ("has the user agreed?"), the agent
   // could already satisfy on its own initiative by simply passing it — no
@@ -208,8 +591,30 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   // bypass path, so it cannot be pointed at a live key under any argument.
   const key = requireTestKey(process.env.SIGNATUREAPI_KEY);
 
+  // A flag given without a value is an error, never "not given": a dropped
+  // --recipient would otherwise fall back to URL matching unannounced.
+  for (const name of ["url", "envelope", "recipient", "timeout"]) {
+    const flag = readFlag(process.argv, name);
+    if (flag.present && !flag.value) {
+      fail("INVALID_FLAG_VALUE", `--${name} was given without a value.`, [`Pass --${name} <value> or --${name}=<value>`]);
+    }
+  }
+  const timeoutSeconds = Number(arg("timeout", "120"));
+  if (!Number.isFinite(timeoutSeconds) || timeoutSeconds <= 0) {
+    fail("INVALID_FLAG_VALUE", `--timeout takes a positive number of seconds; got ${JSON.stringify(arg("timeout"))}.`, ["Pass --timeout 120"]);
+  }
+
   const escapeHatchUrl = arg("url");
   const envelopeId = arg("envelope");
+
+  const embeddedFlag = readFlag(process.argv, "embedded");
+  const embeddedMode = embeddedFlag.present ? (embeddedFlag.value ?? "") : null;
+  if (embeddedMode !== null && !EMBEDDED_MODES.includes(embeddedMode)) {
+    fail("INVALID_EMBEDDED_MODE", `--embedded takes one of ${EMBEDDED_MODES.join(", ")}; got ${JSON.stringify(embeddedMode ?? null)}.`, [
+      "node scripts/complete-ceremony.mjs --envelope <id> --embedded redirect",
+      "node scripts/complete-ceremony.mjs --envelope <id> --embedded message",
+    ]);
+  }
 
   if (escapeHatchUrl && !envelopeId) {
     fail("URL_REQUIRES_ENVELOPE", "A --url given without --envelope cannot be proven to belong to a test-mode ceremony, and there is no flag to bypass that — pass --envelope <id> alongside --url so fetching the envelope with your test key proves test mode.", [
@@ -292,9 +697,52 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   const targetRecipientKey = resolveTargetRecipientKey(envelope, url, recipientKey);
   const targetRecipient = (envelope?.recipients ?? []).find((r) => r.key === targetRecipientKey);
 
+  // Message mode frames the ceremony on a page served at an embeddable_in
+  // origin, so resolve that origin before launching anything.
+  let embedOrigin = null;
+  if (embeddedMode === "message") {
+    const resolved = embedOriginFor(targetRecipient);
+    if (!resolved.ok) fail(resolved.code, resolved.message, resolved.next);
+    embedOrigin = resolved.origin;
+  }
+
   const browser = await chromium.launch();
   const page = await browser.newPage();
-  await page.goto(url, { waitUntil: "networkidle" });
+
+  // Terminal events captured from the delivery mechanism itself (see the
+  // file header). Bindings are exposed to every frame, so each one accepts
+  // calls from the main frame only: the ceremony frame never calls them, and
+  // a call from anywhere else is not evidence of delivery.
+  const deliveredEvents = [];
+  const rejectedMessageOrigins = [];
+  let root = page;
+
+  if (embeddedMode === "redirect") {
+    const hasNavigationApi = await openWithRedirectCapture(page, embeddedCeremonyUrl(url, "redirect"), deliveredEvents);
+    // Without the Navigation API there is no way to see the redirect event,
+    // and "saw nothing" must not pass for "nothing was sent".
+    if (!hasNavigationApi) {
+      await browser.close();
+      fail("NAVIGATION_API_UNAVAILABLE", "This Chromium build has no Navigation API, so the redirect event cannot be captured. Refusing to walk a ceremony whose event this script cannot see.", [
+        "npx playwright install chromium",
+        "Or run --embedded message",
+      ]);
+    }
+  } else if (embeddedMode === "message") {
+    const opened = await openInHostPage(page, {
+      embedOrigin,
+      ceremonySrc: embeddedCeremonyUrl(url, "message"),
+      deliveredEvents,
+      rejectedOrigins: rejectedMessageOrigins,
+    });
+    if (!opened.ok) {
+      await browser.close();
+      fail(opened.code, opened.message, opened.next);
+    }
+    root = opened.frame;
+  } else {
+    await page.goto(url, { waitUntil: "networkidle" });
+  }
 
   // Arm completion with genuine pointer movement: the signer UI only enables
   // completion after organic pointer input, to keep link scanners from signing.
@@ -304,7 +752,9 @@ if (import.meta.url === `file://${process.argv[1]}`) {
 
   let walkLastStep = "loaded the ceremony page";
 
-  const DECLINE_LIKE = /decline|reject|refuse/i;
+  // Embedded signers get Cancel instead of Decline, and clicking it ends the
+  // ceremony with ceremony.canceled, so an embedded walk refuses it too.
+  const DECLINE_LIKE = embeddedMode ? /decline|reject|refuse|cancel/i : /decline|reject|refuse/i;
 
   // The supported DOM contract (added alongside this change): stable
   // `data-ceremony-step` attributes on the elements each step of this walk
@@ -444,15 +894,12 @@ if (import.meta.url === `file://${process.argv[1]}`) {
       await locator.waitFor({ state: "visible", timeout });
     } catch {
       if (!required) return false;
-      const visibleButtons = await page.getByRole("button").allTextContents().catch(() => []);
+      const visibleButtons = await root.getByRole("button").allTextContents().catch(() => []);
       await browser.close();
-      fail("CEREMONY_WALK_STEP_NOT_FOUND", `Could not find "${name}" while ${step}.`, [
-        `Buttons visible on the page at that point: ${JSON.stringify(visibleButtons.filter(Boolean))}`,
-        "Re-run with PWDEBUG=1 to watch the browser",
-        "The ceremony UI may differ from the sequence this script expects (place types/auth can vary) — inspect and update the selectors",
-      ]);
+      const refusal = stepNotFoundOutcome({ events: deliveredEvents, via: embeddedMode ?? undefined, step, name, visibleButtons });
+      fail(refusal.code, refusal.message, refusal.next);
     }
-    if (dataStep) await noteFallbackIfUsed(scope ?? page, dataStep);
+    if (dataStep) await noteFallbackIfUsed(scope ?? root, dataStep);
 
     let label;
     try {
@@ -510,7 +957,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   // the checkbox(es) inside it, which is exactly the collision that caused
   // the selector collision described in probeContainer's doc comment above.
   walkLastStep = "checking for the disclosure/consent modal";
-  const consentModal = stepLocator(page, "disclosure-modal", "#concent-modal");
+  const consentModal = stepLocator(root, "disclosure-modal", "#concent-modal");
   const consentModalProbe = await probeContainer(consentModal, 8000);
   if (consentModalProbe.outcome === "ambiguous") {
     await browser.close();
@@ -521,14 +968,14 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     ]);
   }
   if (consentModalProbe.outcome === "present") {
-    await noteFallbackIfUsed(page, "disclosure-modal");
+    await noteFallbackIfUsed(root, "disclosure-modal");
     walkLastStep = "checking the disclosure agreement checkbox(es)";
     await checkAllCheckboxes(consentModal, "disclosure");
     await clickStep({
       step: "clicking Agree and Continue",
-      locator: stepLocator(page, "disclosure-continue", "#continue-consent-button"),
+      locator: stepLocator(root, "disclosure-continue", "#continue-consent-button"),
       dataStep: "disclosure-continue",
-      scope: page,
+      scope: root,
       name: "Agree and Continue",
       timeout: 10000,
     });
@@ -542,9 +989,9 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   // ceremonies open straight into the document with nothing to click here.
   await clickStep({
     step: "clicking Start",
-    locator: stepLocator(page, "start", "#primary-button:visible, #primary-button-inline:visible", ":visible").first(),
+    locator: stepLocator(root, "start", "#primary-button:visible, #primary-button-inline:visible", ":visible").first(),
     dataStep: "start",
-    scope: page,
+    scope: root,
     name: "Start",
     timeout: 8000,
     required: false,
@@ -553,9 +1000,9 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   // Step 3: click the signature box (a "place") to open the adoption modal.
   await clickStep({
     step: "clicking the signature box",
-    locator: stepLocator(page, "place", 'button[aria-label="Sign here"]').first(),
+    locator: stepLocator(root, "place", 'button[aria-label="Sign here"]').first(),
     dataStep: "place",
-    scope: page,
+    scope: root,
     name: "signature box",
     timeout: 15000,
   });
@@ -567,7 +1014,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   // checkbox value inside it (see the disclosure-modal comment above for
   // why that distinction matters).
   walkLastStep = "waiting for the signature adoption modal";
-  const adoptionModal = stepLocator(page, "adopt-modal", "#adoption-modal");
+  const adoptionModal = stepLocator(root, "adopt-modal", "#adoption-modal");
   const adoptionModalProbe = await probeContainer(adoptionModal, 15000);
   if (adoptionModalProbe.outcome === "ambiguous") {
     await browser.close();
@@ -579,12 +1026,15 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   }
   if (adoptionModalProbe.outcome === "absent") {
     await browser.close();
-    fail("CEREMONY_WALK_STEP_NOT_FOUND", 'Could not find the signature adoption modal after clicking the signature box.', [
-      "Re-run with PWDEBUG=1 to watch the browser",
-      "The ceremony UI may differ from the sequence this script expects — inspect and update the selectors",
-    ]);
+    const refusal = stepNotFoundOutcome({
+      events: deliveredEvents,
+      via: embeddedMode ?? undefined,
+      step: "waiting for the modal after clicking the signature box",
+      name: "the signature adoption modal",
+    });
+    fail(refusal.code, refusal.message, refusal.next);
   }
-  await noteFallbackIfUsed(page, "adopt-modal");
+  await noteFallbackIfUsed(root, "adopt-modal");
 
   walkLastStep = "filling the typed signature";
   const typedInput = stepLocator(adoptionModal, "signature-input", "#typed_symbol");
@@ -601,9 +1051,9 @@ if (import.meta.url === `file://${process.argv[1]}`) {
 
   await clickStep({
     step: "clicking Adopt and Sign",
-    locator: stepLocator(page, "adopt-apply", "#adopt-button"),
+    locator: stepLocator(root, "adopt-apply", "#adopt-button"),
     dataStep: "adopt-apply",
-    scope: page,
+    scope: root,
     name: "Adopt and Sign",
     timeout: 10000,
   });
@@ -614,27 +1064,61 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   // Step 5: "Finish" — submits the ceremony.
   await clickStep({
     step: "clicking Finish",
-    locator: stepLocator(page, "finish", "#primary-button:visible, #primary-button-inline:visible", ":visible").first(),
+    locator: stepLocator(root, "finish", "#primary-button:visible, #primary-button-inline:visible", ":visible").first(),
     dataStep: "finish",
-    scope: page,
+    scope: root,
     name: "Finish",
     timeout: 15000,
   });
 
   // Fallback: if organic input was not detected, a completion consent modal
-  // appears instead of submitting directly. Confirming it is itself the
-  // deliberate act.
-  await clickStep({
-    step: "confirming the completion consent fallback modal (if shown)",
-    locator: page.locator('[data-testid="completion-consent-confirm"]'),
-    name: "confirm",
-    timeout: 4000,
-    required: false,
-  });
+  // appears instead of submitting directly. Standalone, confirming it is
+  // itself the deliberate act. Embedded, it is refused: an embedding app's
+  // signer produces real pointer input, so a walk that needs the dialog
+  // did not exercise what the app's signer will see.
+  const completionConsent = root.locator('[data-testid="completion-consent-confirm"]');
+  if (embeddedMode) {
+    walkLastStep = "checking that completion did not need the consent fallback dialog";
+    const shown = await completionConsent
+      .waitFor({ state: "visible", timeout: 4000 })
+      .then(() => true)
+      .catch(() => false);
+    if (shown) {
+      await browser.close();
+      fail("ORGANIC_INPUT_NOT_ARMED", `The ceremony showed the "Confirm to continue" dialog after Finish (--embedded ${embeddedMode}). It appears when the signer UI saw no organic pointer input. Refusing to confirm it: an embedded walk must complete the way the app's signer does.`, [
+        "Produce real pointer input over the ceremony before Finish (mouse movement inside the page or frame)",
+        "Re-run with PWDEBUG=1 to watch where the pointer moves",
+      ]);
+    }
+  } else {
+    await clickStep({
+      step: "confirming the completion consent fallback modal (if shown)",
+      locator: completionConsent,
+      name: "confirm",
+      timeout: 4000,
+      required: false,
+    });
+  }
 
-  await page.waitForTimeout(2000);
+  let delivery = null;
+  if (embeddedMode) {
+    // The event follows the result page by the ceremony's redirect_delay
+    // (at most 20 seconds). Wait for the first event, then a little longer
+    // so a second, unexpected event is counted too.
+    walkLastStep = "waiting for the terminal ceremony event";
+    const eventDeadline = Date.now() + 45000;
+    while (deliveredEvents.length === 0 && Date.now() < eventDeadline) {
+      await page.waitForTimeout(250);
+    }
+    await page.waitForTimeout(2000);
+    delivery = classifyDeliveredEvents(deliveredEvents, { expected: "ceremony.completed", via: embeddedMode });
+  } else {
+    await page.waitForTimeout(2000);
+  }
   const finalUrl = page.url();
   await browser.close();
+
+  if (delivery && !delivery.ok) fail(delivery.code, delivery.message, delivery.next);
 
   // --envelope is now mandatory (see the URL_REQUIRES_ENVELOPE check above),
   // so envelopeId is always set here — there is no unverified-walk path left
@@ -644,7 +1128,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   // is exactly what the original, defective version of this script reported
   // as success on. The only thing that counts is the server's own view of
   // the recipient.
-  const completeTimeoutMs = Number(arg("timeout", "120")) * 1000;
+  const completeTimeoutMs = timeoutSeconds * 1000;
   const result = await pollForRecipientCompletion({
     api: API,
     envelopeId,
@@ -684,9 +1168,25 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     recipient_key: targetRecipientKey,
     recipient_status: result.recipient.status,
     final_url: finalUrl,
+    ...(delivery
+      ? {
+          event: delivery.event,
+          ...(embeddedMode === "message" ? { rejected_messages: rejectedMessageOrigins.length } : {}),
+        }
+      : {}),
     // Empty once every environment ships the data-ceremony-step contract —
     // see the fallback comment above clickStep for what to remove then.
     contract_fallback_steps: fallbackStepsUsed,
     next: ["node scripts/watch-events.mjs --envelope " + envelopeId],
+  });
+}
+
+if (import.meta.url === `file://${process.argv[1]}`) {
+  // Anything main() did not turn into a named refusal still leaves through
+  // the fail contract, never as a raw stack trace.
+  main().catch((e) => {
+    fail("CEREMONY_WALK_ERROR", `The walk stopped on an unexpected error: ${e?.message ?? e}`, [
+      "Re-run with PWDEBUG=1 to watch the browser",
+    ]);
   });
 }

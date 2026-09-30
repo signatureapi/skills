@@ -77,6 +77,10 @@ default. Record what you find; you will cite it as evidence.
   for people outside the app. Embedded (`custom` plus `embeddable_in`) only
   for signers who are logged in to the app. Either can carry an extra
   challenge as a later array entry without changing who delivers the URL.
+- **A native mobile app.** Look for an Xcode project, an Android Gradle
+  module, or a React Native app. Informs whether signers sign inside the
+  app. Default: a top-level WebView with `custom` authentication, created
+  by the app's server (Shape 4 in `references/product-shapes.md`).
 - **Tenancy.** Grep for organization, account, or tenant tables. Informs
   `sender` and `topics`. Default: one sender (the account's default) and no
   topics.
@@ -104,9 +108,9 @@ Do not repeat them in the design document; link to the answers.
 ## Present the possibilities
 
 Match the journey to the closest starting points in
-`references/product-shapes.md`. Three common shapes are described there:
-send-for-signature inside an existing app, an embedded signing step, and a
-self-serve platform. They are starting points, not a menu. Many products
+`references/product-shapes.md`. Four common shapes are described there:
+send-for-signature inside an existing app, an embedded signing step, a
+self-serve platform, and signing inside a native mobile app. They are starting points, not a menu. Many products
 combine two, or fit none. Say which shape is closest, what differs, and
 what that difference costs. In thorough mode, present two or three
 alternatives with their trade-offs. In quick mode, present one and say why.
@@ -160,7 +164,7 @@ design:
 | How places are defined | `[[place_key]]` placeholders in the file; `fixed_positions` in code; DOCX template fields plus places; a UI where users draw fields | App controls the document source → placeholders. Third-party PDF → `fixed_positions`. PDF viewer component present → drawing UI is feasible | A drawing UI needs page rendering, coordinate conversion, and reading the upload's structure (`inspect_upload`). It is the largest part of a platform | Placeholders when the app owns the file; `fixed_positions` otherwise |
 | Recipient types and `routing` | The values in the current `Recipient.Type` schema; `routing` `sequential` or `parallel` | Approval step in the domain flow → `approver`. Fields filled before signing → `preparer`. Countersignature by the app owner → `automatic_signer`. A qualified-signature requirement → inspect `qualified_signer` and its account prerequisites | `sequential` notifies one recipient at a time. `parallel` notifies all at once | One `signer`; `sequential` |
 | Authentication per recipient | An ordered array of `email_link`, `email_code`, `custom`, `identity_verification`. The first entry is the main method; later entries are extra challenges | Signer is logged in to the app → `custom`. Signer is outside the app → `email_link`. Regulated or high-value document → add a challenge to that main method, e.g. `[email_link, email_code]` for a signer outside the app, `[custom, email_code]` for one inside it | The **first** entry decides who delivers the ceremony URL: `email_link` first returns no URL and SignatureAPI emails the link and any code, so the app sends no email; `email_code` or `custom` first returns the URL for the app to deliver. `custom` is an assertion written to the audit log. `email_link` and `custom` are only valid first and cannot be combined; `email_code` appears at most once; `identity_verification` is never first and is enabled per account | `[email_link]` |
-| Ceremony delivery and return | Emailed link; embedded with `embeddable_in`; `redirect_url` after the ceremony | Web frontend and logged-in signer → embedded. No frontend → emailed | Embedded ceremonies ignore `redirect_url`; the app learns the outcome from events. `redirect_url` receives the outcome, the envelope id and the recipient id as query parameters; the names are in the spec's `Ceremony.RedirectUrl` description | Emailed link, no redirect |
+| Ceremony delivery and return | Emailed link; embedded with `embeddable_in`; embedded in a native app's WebView; `redirect_url` after the ceremony | Web frontend and logged-in signer → embedded. iOS or Android app and logged-in signer → native WebView, no `embeddable_in` for a top-level WebView. No frontend → emailed | Embedded ceremonies ignore `redirect_url`; the app learns the outcome from events. A native app catches them in its WebView navigation handler, and its server confirms the outcome. `redirect_url` receives the outcome, the envelope id and the recipient id as query parameters; the names are in the spec's `Ceremony.RedirectUrl` description | Emailed link, no redirect |
 | On completion | Fetch deliverables and store them; notify the domain; do nothing beyond marking status | Object storage present → store the signed PDF there. Document model present → attach to it | `standard` deliverable includes the audit log; `simple` does not. `delivery_type: none` stops SignatureAPI emailing the deliverable to the recipient | Mark status on `envelope.completed`. On `deliverable.generated`, fetch `GET /envelopes/{envelopeId}/deliverables`, store the file at once (download URLs expire), mark the domain row |
 | Rollout | Test mode only; test then live; who holds the live key | Env file with a `key_test_` key present → test first. Secrets manager present → live key goes there | Test envelopes send no email and are not binding. Live mode needs an active subscription on the account. A live key must never enter this skill's scripts | Test mode first. The user names who holds the live key and confirms live mode is active |
 | Senders and multi-tenant | Account default sender; per-customer `sender` after `POST /senders` verification; `topics` per tenant | Tenant table present and customers send in their own name → per-customer sender. Tenant table present and one brand → default sender plus `topics` | A sender needs email verification before use. `topics` filter webhooks and envelope listings | Account default sender |
@@ -350,7 +354,7 @@ lines. Set `Status: approved` only after the user says yes. The file is the cont
 
 ## References
 
-- `references/product-shapes.md` — three common starting points: what the app calls, what you prove it with
+- `references/product-shapes.md` — four common starting points: what the app calls, what you prove it with
 - `references/plain-language-questions.md` — each decision as a plain question, with the technical meaning of each answer
 - `references/coverage-checklist.md` — the product-design areas beyond API configuration
 - `../signatureapi-integrate/references/brownfield-placement.md` — where signing belongs in an existing codebase

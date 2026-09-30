@@ -15,7 +15,7 @@
 - Uses "offer packet", "partner", "client", "managing partner" and "the
   letter" throughout. Does not rename them to envelope or recipient outside
   a mapping table or an API-boundary sentence.
-- Does not claim the flow is one of the three shapes. Names the closest one
+- Does not claim the flow is one of the four shapes. Names the closest one
   and the departures: an in-app preparer, an emailed signer, an automatic
   countersignature.
 - When it proposes API objects, the client is a `signer` with

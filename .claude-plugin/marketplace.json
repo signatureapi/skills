@@ -4,12 +4,12 @@
     "name": "SignatureAPI",
     "url": "https://signatureapi.com"
   },
-  "description": "SignatureAPI e-signature skills, kept in sync with the hosted MCP server configuration so the same install delivers both.",
+  "description": "SignatureAPI is an e-signature API for developers: send documents for signature, embed signing in your app, and track progress with webhooks. This plugin adds skills to design, build and troubleshoot your integration, plus the hosted MCP server.",
   "plugins": [
     {
       "name": "signatureapi",
       "source": "./",
-      "description": "SignatureAPI e-signature skills, kept in sync with the hosted MCP server configuration so the same install delivers both.",
+      "description": "SignatureAPI is an e-signature API for developers: send documents for signature, embed signing in your app, and track progress with webhooks. This plugin adds skills to design, build and troubleshoot your integration, plus the hosted MCP server.",
       "homepage": "https://signatureapi.com",
       "category": "development",
       "keywords": [
