@@ -3,7 +3,7 @@
   "description": "SignatureAPI is an e-signature API for developers: send documents for signature, embed signing in your app, and track progress with webhooks. This plugin adds skills to design, build and troubleshoot your integration and answer questions from the docs, plus the hosted MCP server.",
   "version": "1.3.0",
   "author": {
-    "name": "SignatureAPI",
+    "name": "Superposition Labs, Inc.",
     "email": "support@signatureapi.com",
     "url": "https://signatureapi.com"
   },

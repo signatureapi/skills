@@ -56,7 +56,7 @@ const BRAND_COLOR = "#2563EB";
 // directory reads `icon` (an SVG or a 512x512 PNG inside the plugin), Codex
 // reads `interface.logo` and `interface.composerIcon`, Cursor reads `logo`.
 export const ICON_PATH = "./assets/icon.svg";
-const AUTHOR = { name: "SignatureAPI", email: "support@signatureapi.com", url: "https://signatureapi.com" };
+const AUTHOR = { name: "Superposition Labs, Inc.", email: "support@signatureapi.com", url: "https://signatureapi.com" };
 const HOMEPAGE = "https://signatureapi.com";
 const PRIVACY_POLICY_URL = "https://signatureapi.com/dpa";
 const OPENAI_PRIVACY_POLICY_URL = "https://signatureapi.com/docs/legal/terms/openai-plugin-privacy";

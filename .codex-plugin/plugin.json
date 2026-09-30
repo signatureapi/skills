@@ -3,7 +3,7 @@
   "version": "1.3.0",
   "description": "SignatureAPI is an e-signature API for developers: send documents for signature, embed signing in your app, and track progress with webhooks. This plugin adds skills to design, build and troubleshoot your integration and answer questions from the docs, plus the hosted MCP server.",
   "author": {
-    "name": "SignatureAPI",
+    "name": "Superposition Labs, Inc.",
     "email": "support@signatureapi.com",
     "url": "https://signatureapi.com"
   },
@@ -27,7 +27,7 @@
     "displayName": "SignatureAPI",
     "shortDescription": "E-signatures for developers",
     "longDescription": "SignatureAPI is an e-signature API for developers: send documents for signature, embed signing in your app, and track progress with webhooks. Four skills design the signing flow, build and test the integration, diagnose one that misbehaves, and answer questions from the current docs. Test mode sends no real email. The hosted MCP server, signed in with OAuth, lets the agent create and inspect envelopes directly.",
-    "developerName": "SignatureAPI",
+    "developerName": "Superposition Labs, Inc.",
     "category": "Developer Tools",
     "capabilities": [
       "Interactive",

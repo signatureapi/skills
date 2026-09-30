@@ -63,6 +63,9 @@ test("agent-skills.json parses and matches the generator's current output", asyn
 test("Codex listing meets public-directory subtitle and contact requirements", async () => {
   const files = await generate();
   const { interface: listing, author } = JSON.parse(files[".codex-plugin/plugin.json"]);
+  assert.equal(author.name, "Superposition Labs, Inc.");
+  assert.equal(listing.developerName, "Superposition Labs, Inc.");
+  assert.equal(listing.displayName, "SignatureAPI");
   assert.equal(author.email, "support@signatureapi.com");
   assert.ok(listing.shortDescription.trim().length > 0);
   assert.ok([...listing.shortDescription].length <= 30, "directory subtitles have a 30-character limit");
