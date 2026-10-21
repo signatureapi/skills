@@ -1,7 +1,8 @@
 {
   "name": "signatureapi",
   "owner": {
-    "name": "SignatureAPI",
+    "name": "Superposition Labs, Inc.",
+    "email": "support@signatureapi.com",
     "url": "https://signatureapi.com"
   },
   "plugins": [
